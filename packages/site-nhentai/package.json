@@ -1,0 +1,12 @@
+{
+  "name": "@better-eh/site-nhentai",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./metadata": "./src/metadata.ts"
+  },
+  "dependencies": {
+    "@better-eh/core": "workspace:*"
+  }
+}

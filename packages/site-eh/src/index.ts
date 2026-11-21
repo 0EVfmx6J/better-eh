@@ -1,0 +1,1 @@
+export { ehAdapter } from './adapter'

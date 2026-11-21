@@ -1,0 +1,115 @@
+:host {
+  all: initial;
+  @apply fixed;
+  inset: 0;
+  @apply block;
+  touch-action: pan-y pinch-zoom;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+h1,
+h2,
+p,
+dl,
+dd {
+  @apply m-0;
+}
+a,
+button {
+  color: inherit;
+}
+a {
+  text-decoration: none;
+}
+button,
+input {
+  font: inherit;
+}
+button {
+  @apply p-0;
+  border: 0;
+  background: none;
+  @apply cursor-pointer;
+}
+button:disabled {
+  @apply cursor-default opacity-35;
+}
+img,
+svg {
+  @apply block;
+}
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+:is(.eh-app, .back-to-top) {
+  --paper: #fafafa;
+  --surface: #fff;
+  --panel: #f0f0f0;
+  --ink: #161616;
+  --muted: #626262;
+  --line: #e1e1e1;
+  --danger-bg: #b42318;
+  --danger-text: #fff;
+  --danger-hover: #912018;
+  --danger-subtle-bg: #fef3f2;
+  --danger-subtle-text: #b42318;
+  --danger-subtle-hover: #fee4e2;
+  --radius: 12px;
+  color-scheme: light;
+}
+.eh-app {
+  height: 100vh;
+  height: 100dvh;
+  @apply bg-paper text-ink;
+  font:
+    400 14px/1.5 'Inter',
+    system-ui,
+    sans-serif;
+  @apply text-left;
+  overflow: hidden auto;
+  @apply overscroll-y-contain;
+  -webkit-overflow-scrolling: touch;
+  overflow-anchor: auto;
+}
+.eh-app:not(.is-reader) {
+  scrollbar-gutter: stable;
+}
+.eh-app.stop-scroll {
+  @apply overflow-y-hidden;
+}
+:is(.eh-app, .back-to-top)[data-theme='dark'] {
+  --paper: #101010;
+  --surface: #171717;
+  --panel: #212121;
+  --ink: #f4f4f4;
+  --muted: #a6a6a6;
+  --line: #303030;
+  --danger-bg: #f97066;
+  --danger-text: #280b08;
+  --danger-hover: #fda29b;
+  --danger-subtle-bg: #3b1518;
+  --danger-subtle-text: #fda29b;
+  --danger-subtle-hover: #511c20;
+  color-scheme: dark;
+}
+.shell {
+  --shell-width: 1440px;
+  width: min(var(--shell-width), 100%);
+  @apply mx-auto;
+  padding-inline: max(38px, env(safe-area-inset-left)) max(38px, env(safe-area-inset-right));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

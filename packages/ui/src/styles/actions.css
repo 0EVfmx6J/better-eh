@@ -1,0 +1,46 @@
+.confirmation-dialog {
+  @apply fixed;
+  inset: 0;
+  width: min(420px, calc(100% - 32px));
+  max-height: calc(100% - 32px);
+  @apply m-auto p-0;
+  border: 1px solid var(--line);
+  @apply rounded-ui bg-surface text-ink;
+  box-shadow: 0 12px 40px #0004;
+  @apply overscroll-contain;
+}
+.confirmation-dialog::backdrop {
+  background: #0008;
+}
+.confirmation-content h2 {
+  @apply text-[18px] font-bold;
+}
+.confirmation-content p {
+  @apply mt-[8px] text-muted;
+}
+.action-button-danger {
+  --delete-bg: var(--danger-bg);
+  --delete-text: var(--danger-text);
+  --delete-hover: var(--danger-hover);
+}
+.action-button-danger-subtle {
+  --delete-bg: var(--danger-subtle-bg);
+  --delete-text: var(--danger-subtle-text);
+  --delete-hover: var(--danger-subtle-hover);
+}
+.eh-app :is(button, a):is(.action-button-danger, .action-button-danger-subtle) {
+  border-color: var(--delete-bg);
+  background: var(--delete-bg);
+  color: var(--delete-text);
+}
+.eh-app
+  :is(button, a):is(.action-button-danger, .action-button-danger-subtle):is(:hover, :active):not(
+    :disabled,
+    [aria-disabled='true']
+  ) {
+  border-color: var(--delete-hover);
+  background: var(--delete-hover);
+}
+.card-quick-action > .action-button-danger-subtle:focus-visible {
+  outline-color: var(--delete-text);
+}

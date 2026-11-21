@@ -1,0 +1,44 @@
+@import 'tailwindcss' source(none);
+@import './styles/foundation.css';
+@import './styles/header.css';
+@import './styles/tag-color-picker.css';
+@import './styles/tag-management.css';
+@import './styles/layout.css';
+@import './styles/galleries.css';
+@import './styles/feedback.css';
+@import './styles/reader.css';
+@import './styles/actions.css';
+@import './styles/reader-pages.css';
+
+/* The userscript injects this compiled entry into its Shadow DOM. */
+@source './components';
+@source './BetterEhApp.vue';
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --radius-ui: var(--radius);
+}
+
+@theme {
+  --animate-loading-spinner: loading-dash 1.5s ease-in-out infinite;
+
+  @keyframes loading-dash {
+    0% {
+      stroke-dasharray: 1, 200;
+      stroke-dashoffset: 0;
+    }
+    50% {
+      stroke-dasharray: 90, 150;
+      stroke-dashoffset: -40;
+    }
+    100% {
+      stroke-dasharray: 90, 150;
+      stroke-dashoffset: -120;
+    }
+  }
+}

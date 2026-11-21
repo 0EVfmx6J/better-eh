@@ -1,0 +1,27 @@
+{
+  "name": "@better-eh/userscript",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --mode userscript",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-eh/core": "workspace:*",
+    "@better-eh/site-eh": "workspace:*",
+    "@better-eh/site-nhentai": "workspace:*",
+    "@better-eh/ui": "workspace:*",
+    "pinia": "catalog:",
+    "vue": "catalog:"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vite-plugin-monkey": "catalog:",
+    "vue-tsc": "catalog:"
+  }
+}

@@ -1,0 +1,19 @@
+.main {
+  padding-top: clamp(30px, 4.3vw, 58px);
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  touch-action: pan-y pinch-zoom;
+}
+.reader-main {
+  @apply min-h-full;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: calc(var(--reader-progress-bottom) + var(--reader-progress-height) + 16px);
+}
+.is-reader {
+  --reader-progress-bottom: max(12px, calc(env(safe-area-inset-bottom) + 6px));
+  --reader-progress-height: 58px;
+}
+@media (max-width: 650px) {
+  .shell {
+    padding-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  }
+}

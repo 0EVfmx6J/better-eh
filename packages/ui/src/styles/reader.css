@@ -1,0 +1,142 @@
+.reader-controls {
+  @apply flex flex-wrap items-center justify-end;
+  gap: 4px 8px;
+  padding-block: 4px 8px;
+}
+.reader-controls-tools {
+  @apply me-auto;
+}
+.reader-controls .reading-actions {
+  @apply flex-none;
+}
+.reader-progress {
+  @apply fixed;
+  inset-inline: max(14px, env(safe-area-inset-left)) max(14px, env(safe-area-inset-right));
+  bottom: var(--reader-progress-bottom);
+  @apply z-11 grid;
+  width: min(460px, calc(100% - max(28px, env(safe-area-inset-left) + env(safe-area-inset-right))));
+  @apply gap-[8px] mx-auto;
+}
+.reader-progress-bar {
+  @apply flex;
+  min-height: var(--reader-progress-height);
+  @apply items-center gap-[12px] px-[14px];
+  border: 1px solid var(--line);
+  @apply rounded-ui bg-surface;
+  box-shadow: 0 4px 18px #0002;
+}
+.reader-progress-error {
+  @apply flex items-center justify-between gap-[8px] p-[8px];
+  border: 1px solid var(--line);
+  @apply rounded-ui bg-surface;
+  color: var(--danger-subtle-text);
+}
+.reader-previous-error {
+  @apply fixed;
+  top: max(calc(env(safe-area-inset-top) + 12px), calc(var(--masthead-height, 0px) + 8px));
+  inset-inline: 16px;
+  @apply z-11;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  @apply mx-auto;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  @apply rounded-ui bg-surface;
+  box-shadow: 0 4px 18px #0002;
+}
+.reader-chapters {
+  @apply grid;
+  padding: 4px 8px 8px;
+  border: 1px solid var(--line);
+  @apply rounded-ui bg-surface;
+  box-shadow: 0 4px 18px #0002;
+}
+.reader-chapters-header {
+  @apply flex items-center justify-between ps-[8px] text-[14px] font-[650];
+}
+.reader-chapter-list {
+  @apply relative;
+  max-height: min(300px, 40dvh);
+  @apply m-0 p-[4px] overflow-y-auto overscroll-y-contain list-none;
+}
+.reader-chapter-list button {
+  @apply flex w-full min-h-[44px] items-baseline gap-[10px];
+  padding: 9px 8px;
+  @apply rounded-lg;
+  text-align: start;
+  @apply wrap-anywhere;
+}
+.reader-chapter-list button:hover:not(:disabled),
+.reader-chapter-list [aria-current='true'] {
+  @apply bg-panel;
+}
+.reader-chapter-list [aria-current='true'] {
+  @apply font-[650];
+}
+.reader-chapter-number {
+  @apply flex-none;
+  min-width: 2ch;
+  @apply text-muted tabular-nums;
+}
+.reader-progress input {
+  --reader-track: linear-gradient(to right, var(--ink) var(--reader-progress-value), var(--muted) 0);
+  @apply flex-1 min-w-0 h-[44px];
+  appearance: none;
+  background: transparent;
+  @apply cursor-pointer touch-none;
+}
+.reader-progress input:disabled {
+  @apply opacity-45 cursor-default;
+}
+.reader-progress input::-webkit-slider-runnable-track {
+  @apply h-[4px] rounded-sm;
+  background: var(--reader-track);
+}
+.reader-progress input::-moz-range-track {
+  @apply h-[4px] rounded-sm;
+  background: var(--reader-track);
+}
+.reader-progress input::-webkit-slider-thumb {
+  @apply w-[16px] h-[16px];
+  margin-top: -6px;
+  appearance: none;
+  @apply rounded-[50%] bg-ink;
+}
+.reader-progress input::-moz-range-thumb {
+  @apply w-[16px] h-[16px];
+  border: 0;
+  @apply rounded-[50%] bg-ink;
+}
+.reading-actions {
+  @apply flex items-center flex-wrap gap-[8px];
+}
+.library-action {
+  @apply min-h-[44px];
+}
+.detail-actions {
+  grid-area: actions;
+  @apply mt-[12px];
+}
+.detail-with-cover .detail-actions {
+  @apply grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (max-width: 650px) {
+  .detail-with-cover .detail-actions {
+    @apply flex;
+  }
+}
+.detail-actions .action-button {
+  min-inline-size: min(112px, 100%);
+  max-inline-size: 100%;
+  @apply whitespace-normal wrap-anywhere;
+}
+.detail-actions svg {
+  @apply flex-none;
+}
+.reading-actions [aria-pressed='true'] {
+  @apply bg-panel;
+}
+.reading-actions [aria-pressed='true'] svg {
+  fill: currentColor;
+}

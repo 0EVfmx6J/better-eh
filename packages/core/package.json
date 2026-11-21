@@ -1,0 +1,9 @@
+{
+  "name": "@better-eh/core",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "es-toolkit": "catalog:"
+  }
+}
