@@ -40,7 +40,6 @@ const props = defineProps<{
   readingLibraryRepository: ReadingLibraryRepository
 }>()
 const app = useTemplateRef<HTMLElement>('app')
-
 const header = useTemplateRef('header')
 const siteMenu = useTemplateRef('siteMenu')
 const menuOpen = shallowRef(false)
@@ -357,6 +356,7 @@ function goBack(event: MouseEvent) {
     />
 
     <main
+      ref="pageContent"
       class="shell main"
       :class="{ 'reader-main': reader }"
       :aria-busy="busy"

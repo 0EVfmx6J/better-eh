@@ -1,5 +1,5 @@
 import { useEventListener } from '@vueuse/core'
-import { computed, nextTick, onScopeDispose, ref, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
+import { computed, nextTick, onMounted, onScopeDispose, ref, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { createPageLoader, nativePageFlag } from '@better-eh/core'
 import type {
   CatalogPage,
@@ -86,6 +86,7 @@ export function useNavigation(
   const loadingPrevious = ref(false)
   const loadPreviousFailure = shallowRef<string>()
   const readerRevision = ref(0)
+  const pageContent = useTemplateRef<HTMLElement>('pageContent')
   const readerPages = useTemplateRef<InstanceType<typeof ReaderPages>>('readerPages')
   const readingQueue = shallowRef(initialQueue?.chapters)
   const readerChapter = ref(initialQueue?.chapter ?? 0)
@@ -124,7 +125,7 @@ export function useNavigation(
   if (!navigationState()?.entryId) history.replaceState({ ...navigationState(), entryId }, '')
   let active: AbortController | undefined
   let appendController: AbortController | undefined
-  let readerEntrance: Animation | undefined
+  let pageEntrance: Animation | undefined
   const hasMore = computed(() => {
     const current = page.value
     if (current.kind === 'reader') return readerHasNext(current) || Boolean(nextChapter.value)
@@ -178,9 +179,21 @@ export function useNavigation(
     return current.gallery ?? (state?.previousKind === 'gallery' ? state.previousUrl : undefined)
   }
 
+  function showPageEntrance(): void {
+    pageEntrance?.cancel()
+    if (viewActive?.value === false || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    pageEntrance = pageContent.value?.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 230,
+      easing: 'ease-in-out',
+    })
+  }
+
   async function scrollToReaderFrame(chapter: number, index: number, signal: AbortSignal): Promise<boolean> {
     if (!(await readerPages.value?.scrollToPage(chapter, index, signal))) return false
-    if (!signal.aborted) showReaderFrame(chapter, index)
+    if (!signal.aborted) {
+      showReaderFrame(chapter, index)
+      showPageEntrance()
+    }
     return true
   }
 
@@ -222,7 +235,6 @@ export function useNavigation(
     if ((reload || readerStart) && (pending.value || savingTags.value)) return
     active?.abort()
     appendController?.abort()
-    readerEntrance?.cancel()
     loadMoreFailure.value = undefined
     loadPreviousFailure.value = undefined
     refreshing.value = reload
@@ -238,7 +250,6 @@ export function useNavigation(
     active = request
     pending.value = url
     failure.value = undefined
-    let readerExit: Animation | undefined
 
     try {
       let target = url
@@ -256,29 +267,7 @@ export function useNavigation(
       if (readerSeek && (entry.page.kind !== 'reader' || entry.page.index !== index)) {
         throw new Error(`找不到第 ${index} 页。`)
       }
-      let readerSurface: Element | null | undefined
-      if (fromStart) {
-        entry = await firstReaderPage(entry, request.signal)
-        if (request.signal.aborted) return
-        if (readerStart && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          readerSurface = viewport.value?.querySelector('.reader-surface')
-          readerExit = readerSurface?.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(12px)' }], {
-            duration: 120,
-            easing: 'ease-in',
-            fill: 'forwards',
-          })
-          if (readerExit) {
-            const animation = readerExit
-            const cancelExit = () => animation.cancel()
-            request.signal.addEventListener('abort', cancelExit, { once: true })
-            try {
-              await animation.finished
-            } finally {
-              request.signal.removeEventListener('abort', cancelExit)
-            }
-          }
-        }
-      }
+      if (fromStart) entry = await firstReaderPage(entry, request.signal)
       if (request.signal.aborted) return
       if (push && entry.url === currentUrl.value) return
 
@@ -332,20 +321,12 @@ export function useNavigation(
       const position = restored ?? (mode === 'pop' && !readerQueue ? scrollPositions.get(entry.url) : undefined)
       viewport.value?.scrollTo({ top: position?.scrollTop ?? 0, behavior: 'instant' })
       galleryRestoration.value = position?.anchor
-      readerExit?.cancel()
-      readerEntrance = readerSurface?.animate(
-        [
-          { opacity: 0, transform: 'translateY(-12px)' },
-          { opacity: 1, transform: 'translateY(0)' },
-        ],
-        { duration: 240, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-      )
+      if (!reload) showPageEntrance()
     } catch (error) {
       if (!request.signal.aborted) {
         failure.value = { url, mode, index, queue, message: error instanceof Error ? error.message : '页面加载失败。' }
       }
     } finally {
-      readerExit?.cancel()
       if (active === request) {
         active = undefined
         pending.value = undefined
@@ -512,11 +493,16 @@ export function useNavigation(
     }
   }
 
-  const abortRequests = () => [active, appendController].forEach((request) => request?.abort())
-  onScopeDispose(abortRequests)
+  const stopNavigation = () => {
+    active?.abort()
+    appendController?.abort()
+    pageEntrance?.cancel()
+  }
+  onMounted(showPageEntrance)
+  onScopeDispose(stopNavigation)
   if (viewActive)
     watch(viewActive, (visible) => {
-      if (!visible) abortRequests()
+      if (!visible) stopNavigation()
     })
   history.scrollRestoration = 'manual'
   useEventListener(window, 'popstate', () => {
