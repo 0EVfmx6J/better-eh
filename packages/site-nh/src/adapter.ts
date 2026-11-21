@@ -3,21 +3,21 @@ import { parseCatalog } from './catalog'
 import { galleryCommentsUrl, parseCommentsResponse } from './comments'
 import { positiveInteger } from './dom'
 import { parseGallery } from './gallery'
-import { nhentaiNavigation, nhentaiPageCacheGroup } from './navigation'
+import { nhNavigation, nhPageCacheGroup } from './navigation'
 import { parseReader } from './reader'
 import { completeTags } from './tag-completion'
 import { loadTagDirectory } from './tag-directory'
 import { canonicalGalleryUrl, galleryPath, readerPageUrl, readerPath, searchUrl } from './urls'
 
-export const nhentaiAdapter: SiteAdapter = {
-  name: 'nHentai',
+export const nhAdapter: SiteAdapter = {
+  name: 'nh',
   home: (url) => new URL('/', url).href,
-  pageCacheGroup: nhentaiPageCacheGroup,
+  pageCacheGroup: nhPageCacheGroup,
   canonicalGalleryUrl,
   readerPageUrl,
-  navigation: nhentaiNavigation,
+  navigation: nhNavigation,
   search(url, query) {
-    return query ? searchUrl(url, query) : nhentaiAdapter.home(url)
+    return query ? searchUrl(url, query) : nhAdapter.home(url)
   },
   completeTags,
   parseCommentsResponse,

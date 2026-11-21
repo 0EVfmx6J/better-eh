@@ -247,7 +247,7 @@ importers:
       '@better-eh/site-eh':
         specifier: workspace:*
         version: link:../../packages/site-eh
-      '@better-eh/site-nhentai':
+      '@better-eh/site-nh':
         specifier: workspace:*
         version: link:../../packages/site-nh
       '@better-eh/ui':

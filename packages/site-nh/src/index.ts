@@ -1,1 +1,1 @@
-export { nhentaiAdapter } from './adapter'
+export { nhAdapter } from './adapter'

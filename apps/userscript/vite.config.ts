@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 import monkey from 'vite-plugin-monkey'
 import { ehMatchPatterns } from '@better-eh/site-eh/metadata'
-import { nhentaiMatchPatterns } from '@better-eh/site-nhentai/metadata'
+import { nhMatchPatterns } from '@better-eh/site-nh/metadata'
 import manifest from './package.json' with { type: 'json' }
 
 export default defineConfig({
@@ -20,10 +20,10 @@ export default defineConfig({
         namespace: 'better-eh',
         version: manifest.version,
         description: {
-          '': 'A gallery browser for E-Hentai, ExHentai and nHentai on desktop and iOS',
-          'zh-CN': '适用于桌面 Tampermonkey 和 iOS Userscripts 的 E-Hentai、ExHentai 和 nHentai 画廊浏览器。',
+          '': 'A gallery browser for E-Hentai, ExHentai and NH on desktop and iOS',
+          'zh-CN': '适用于桌面 Tampermonkey 和 iOS Userscripts 的 E-Hentai、ExHentai 和 NH 画廊浏览器。',
         },
-        match: [...ehMatchPatterns, ...nhentaiMatchPatterns],
+        match: [...ehMatchPatterns, ...nhMatchPatterns],
         'run-at': 'document-end',
         noframes: true,
         grant: 'none',
@@ -51,7 +51,7 @@ export default defineConfig({
  * Tag translations: EhTagTranslation Database contributors, v7.30120.1
  * https://github.com/EhTagTranslation/Database — CC BY-NC-SA 3.0 CN
  * https://creativecommons.org/licenses/by-nc-sa/3.0/cn/
- * nHentai translations: lgou2w / L2 Studio, @l2studio/nhentai-tags 0.3.5
+ * NH translations: lgou2w / L2 Studio, @l2studio/nhentai-tags 0.3.5
  * https://github.com/l2studio/nhentai-tags — package Apache-2.0, translation data CC BY-SA 3.0
  * https://creativecommons.org/licenses/by-sa/3.0/ — Chinese labels loaded on demand
  */`

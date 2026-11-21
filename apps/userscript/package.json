@@ -11,7 +11,7 @@
   "dependencies": {
     "@better-eh/core": "workspace:*",
     "@better-eh/site-eh": "workspace:*",
-    "@better-eh/site-nhentai": "workspace:*",
+    "@better-eh/site-nh": "workspace:*",
     "@better-eh/ui": "workspace:*",
     "pinia": "catalog:",
     "vue": "catalog:"

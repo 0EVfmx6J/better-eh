@@ -1,7 +1,7 @@
 import { catalogCacheGroup, type PageCacheGroup, type SiteNavigationItem } from '@better-eh/core'
 import { favoritesPath, galleryPath, galleryUrl, readerPath } from './urls'
 
-export function nhentaiPageCacheGroup(url: URL): PageCacheGroup {
+export function nhPageCacheGroup(url: URL): PageCacheGroup {
   const reader = readerPath.exec(url.pathname)?.[1]
   if (reader) return { kind: 'reader', key: galleryUrl(url, reader) }
   const gallery = galleryPath.exec(url.pathname)?.[1]
@@ -9,7 +9,7 @@ export function nhentaiPageCacheGroup(url: URL): PageCacheGroup {
   return catalogCacheGroup(url, ['page'])
 }
 
-export function nhentaiNavigation(url: URL): SiteNavigationItem[] {
+export function nhNavigation(url: URL): SiteNavigationItem[] {
   return [
     { id: 'home', label: '首页', href: new URL('/', url).href },
     { id: 'favorites', label: '收藏夹', href: new URL(favoritesPath, url).href },

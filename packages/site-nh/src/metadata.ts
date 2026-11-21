@@ -1,1 +1,1 @@
-export const nhentaiMatchPatterns = ['*://nhentai.net/*']
+export const nhMatchPatterns = ['*://nhentai.net/*']

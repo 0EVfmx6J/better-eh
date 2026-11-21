@@ -1,6 +1,6 @@
 import { nativePageFlag as nativeFlag, type SiteAdapter, type SitePage } from '@better-eh/core'
 import { ehAdapter } from '@better-eh/site-eh'
-import { nhentaiAdapter } from '@better-eh/site-nhentai'
+import { nhAdapter } from '@better-eh/site-nh'
 import { mount } from './mount'
 import { createNativePull, prefersReducedMotion } from './native-pull'
 import { createDocumentLock, createNativeFrame } from './native-surface'
@@ -12,7 +12,7 @@ const revealFlag = 'better-eh-reveal'
 const adapters = new Map([
   ['e-hentai.org', ehAdapter],
   ['exhentai.org', ehAdapter],
-  ['nhentai.net', nhentaiAdapter],
+  ['nhentai.net', nhAdapter],
 ])
 
 function nativeLink(href: string): string {
