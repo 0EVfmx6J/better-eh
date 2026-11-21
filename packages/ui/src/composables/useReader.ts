@@ -49,7 +49,15 @@ export function useReader({
     canLoadNextPage,
     canLoadNextChapter,
   } = navigation
-  const { y: scrollY, isScrolling } = useScroll(app)
+  const returningToTop = shallowRef(false)
+  const { start: scheduleReturnToTopEnd } = useTimeoutFn(() => (returningToTop.value = false), 200, {
+    immediate: false,
+  })
+  const { y: scrollY, isScrolling } = useScroll(app, {
+    onScroll: () => {
+      if (returningToTop.value) scheduleReturnToTopEnd()
+    },
+  })
   let stoppingScroll = false
 
   const brokenImages = shallowRef(new Set<string>())
@@ -91,6 +99,7 @@ export function useReader({
   )
 
   watch(currentUrl, () => {
+    returningToTop.value = false
     if (!seekingReader.value) clearReaderPreview()
   })
   watch(readingQueue, () => {
@@ -186,6 +195,10 @@ export function useReader({
     if (readerStartsLater.value) {
       void returnToReaderStart()
       return
+    }
+    if (!reducedMotion.value && (page.value.kind === 'catalog' || page.value.kind === 'library')) {
+      returningToTop.value = true
+      scheduleReturnToTopEnd()
     }
     viewport.scrollTo({ top: 0, behavior: reducedMotion.value ? 'instant' : 'smooth' })
   }
@@ -290,6 +303,7 @@ export function useReader({
     readerPagesBehind,
     brokenImages,
     showBackToTop,
+    returningToTop,
     backToTopTitle,
     toggleReaderChrome,
     tapReader,

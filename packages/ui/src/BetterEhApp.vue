@@ -2,7 +2,7 @@
 import { ArrowUp, Bookmark, Check, Menu, Trash2, X } from '@lucide/vue'
 import { useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
+import { computed, provide, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
 import type { ReadingLibraryRepository, SiteAdapter, SiteNavigationItem, SitePage } from '@better-eh/core'
 import AppHeader from './components/AppHeader.vue'
 import CatalogPage from './components/CatalogPage.vue'
@@ -26,6 +26,7 @@ import { useReader } from './composables/useReader'
 import { usePreferencesStore } from './stores/preferences'
 import { useReadingLibraryStore } from './stores/reading-library'
 import { useTagDirectoryStore } from './stores/tag-directory'
+import { galleryViewportKey } from './utils/gallery-scroll'
 import { isPrimaryClick } from './utils/is-primary-click'
 import { librarySections, libraryUrl } from './utils/reading-library-route'
 
@@ -142,6 +143,7 @@ const {
   readerPagesBehind,
   brokenImages,
   showBackToTop,
+  returningToTop,
   backToTopTitle,
   toggleReaderChrome,
   tapReader,
@@ -160,6 +162,7 @@ const {
   reducedMotion,
   focusNavigation: () => header.value?.focusNavigation(),
 })
+provide(galleryViewportKey, { viewport: app, restoration: navigation.galleryRestoration, returningToTop })
 const refreshBlocked = computed(() => Boolean(pending.value || savingTags.value))
 const pullRefreshBlocked = computed(() => refreshBlocked.value || hasPrevious.value || loadingPrevious.value)
 const { offset: pullOffset, ready: pullReady } = usePullToRefresh(app, pullRefreshBlocked, reducedMotion, refreshPage)
@@ -255,7 +258,7 @@ function refreshPage(): Promise<void> {
 function activate(event: MouseEvent, url: string | undefined) {
   if (!url || !isPrimaryClick(event)) return
   event.preventDefault()
-  void navigate(url)
+  void navigate(url, 'push', undefined, undefined, event.currentTarget)
 }
 
 function startGalleryReading(event: MouseEvent): void {

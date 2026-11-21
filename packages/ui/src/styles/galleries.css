@@ -64,10 +64,19 @@
   @apply opacity-85;
 }
 
+.eh-app:has(.catalog-grid) {
+  overflow-anchor: none;
+}
 .catalog-grid {
-  @apply grid;
-  grid-template-columns: repeat(auto-fill, minmax(192px, 1fr));
-  @apply mt-[18px] list-none gap-[18px] p-0;
+  --catalog-min-column-width: 192px;
+  --catalog-gap: 18px;
+  --catalog-fixed-columns: 0;
+  @apply relative mt-[18px];
+}
+.catalog-row {
+  @apply absolute inset-x-0 top-0 grid;
+  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr));
+  column-gap: var(--catalog-gap);
 }
 .catalog-empty,
 .library-notice {
@@ -89,18 +98,8 @@
 .gallery-card {
   @apply relative flex min-w-0 flex-col;
   border: 1px solid var(--line);
-  @apply rounded-ui bg-surface opacity-100;
-  transform: translateY(0);
-  transition:
-    border-color 180ms,
-    opacity 360ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-@starting-style {
-  .gallery-card {
-    @apply opacity-0;
-    transform: translateY(14px);
-  }
+  @apply rounded-ui bg-surface;
+  transition: border-color 180ms;
 }
 .card-link {
   @apply flex flex-1 flex-col overflow-hidden;
@@ -230,8 +229,8 @@
   @apply tabular-nums;
 }
 .list-view {
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
-  @apply gap-[10px];
+  --catalog-min-column-width: 360px;
+  --catalog-gap: 10px;
 }
 .list-view .card-link {
   @apply flex-row items-center;
@@ -399,11 +398,11 @@
     margin-block: 14px 10px;
   }
   .catalog-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    @apply gap-[10px];
+    --catalog-fixed-columns: 2;
+    --catalog-gap: 10px;
   }
   .list-view {
-    grid-template-columns: minmax(0, 1fr);
+    --catalog-fixed-columns: 1;
   }
   .thumbnails {
     grid-template-columns: repeat(4, minmax(0, 1fr));

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@better-eh/core": "workspace:*",
+    "@tanstack/vue-virtual": "catalog:",
     "@vueuse/core": "catalog:",
     "@vueuse/motion": "catalog:",
     "@lucide/vue": "catalog:",

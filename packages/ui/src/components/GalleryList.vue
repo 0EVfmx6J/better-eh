@@ -6,13 +6,15 @@
   "
 >
 import { Grid2X2, Image, List } from '@lucide/vue'
-import { usePreferredReducedMotion } from '@vueuse/core'
+import { useEventListener, usePreferredReducedMotion } from '@vueuse/core'
 import { MotionComponent } from '@vueuse/motion'
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
+import { computed, inject, nextTick, provide, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { ReadingGallery } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
+import { galleryResizePositionKey, galleryViewportKey, type GalleryResizePosition } from '../utils/gallery-scroll'
 import ActionButton from './ActionButton.vue'
+import GalleryRows from './GalleryRows.vue'
 
 const props = defineProps<{
   title: string
@@ -43,6 +45,22 @@ const dateFormat = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeS
 const selectionStart = useTemplateRef<HTMLButtonElement>('selectionStart')
 const selectionExit = useTemplateRef<HTMLButtonElement>('selectionExit')
 const selectedHrefs = shallowRef(new Set<string>())
+const viewport = inject(galleryViewportKey)?.viewport
+const resizePosition = shallowRef<GalleryResizePosition>()
+provide(galleryResizePositionKey, resizePosition)
+useEventListener(
+  () => viewport?.value,
+  'scroll',
+  () => {
+    const scroll = viewport?.value
+    const top = resizePosition.value?.scrollTop
+    if (!scroll || top === undefined || Math.abs(scroll.scrollTop - top) <= 1) return
+    // A taller viewport can clamp scrollTop at the end before the resize is applied.
+    const clampedTop = Math.min(top, Math.max(0, scroll.scrollHeight - scroll.clientHeight))
+    if (Math.abs(scroll.scrollTop - clampedTop) > 1) resizePosition.value = undefined
+  },
+  { passive: true },
+)
 const groups = computed(() => {
   const main = { id: 'main', title: props.itemsTitle, items: props.items }
   return props.featured ? [{ id: 'featured', ...props.featured }, main] : [main]
@@ -159,65 +177,71 @@ function toggleAll(): void {
       <MotionComponent
         v-if="group.items.length"
         :key="listKey"
-        is="ul"
-        class="catalog-grid"
-        :class="{ 'list-view': layout === 'list' }"
-        :initial="motion === 'reduce' ? { opacity: 1 } : { opacity: 0, y: 8 }"
-        :enter="{ opacity: 1, y: 0, transition: { duration: motion === 'reduce' ? 0 : 230 } }"
-        role="list"
-        :aria-labelledby="group.title ? headingId + '-' + group.id : headingId"
+        is="div"
+        :initial="{ opacity: motion === 'reduce' ? 1 : 0 }"
+        :enter="{ opacity: 1, transition: { duration: motion === 'reduce' ? 0 : 230 } }"
       >
-        <li
-          v-for="item in group.items"
-          :key="item.href"
-          class="gallery-card"
-          :class="{ 'is-selected': selecting && selectedHrefs.has(item.href) }"
+        <GalleryRows
+          v-slot="{ item, position }"
+          :items="group.items"
+          :group="group.id"
+          :list-view="layout === 'list'"
+          :aria-labelledby="group.title ? headingId + '-' + group.id : headingId"
         >
-          <label v-if="selecting" class="card-selector">
-            <span class="card-selector-box">
-              <input
-                type="checkbox"
-                :aria-label="'选择 ' + item.title"
-                :checked="selectedHrefs.has(item.href)"
-                :disabled="selectionBusy"
-                @change="changeSelection(item.href, $event)"
-              />
-            </span>
-          </label>
-          <component
-            :is="selecting ? 'div' : 'a'"
-            class="card-link"
-            :href="selecting ? undefined : item.href"
-            @click="!selecting && emit('navigate', $event, item.href)"
+          <article
+            class="gallery-card"
+            :class="{ 'is-selected': selecting && selectedHrefs.has(item.href) }"
+            :data-gallery-href="item.href"
+            :aria-posinset="position"
+            :aria-setsize="group.items.length"
+            role="listitem"
           >
-            <div class="poster">
-              <img v-if="item.cover" :src="item.cover" alt="" loading="lazy" decoding="async" />
-              <Image v-else :size="24" class="muted" aria-hidden="true" />
-              <span v-if="item.progressIndex || item.pages" class="page-count">
-                <template v-if="item.progressIndex && item.pages >= item.progressIndex">
-                  {{ item.progressIndex }}/{{ item.pages }} 页
-                </template>
-                <template v-else-if="item.progressIndex">第 {{ item.progressIndex }} 页</template>
-                <template v-else>{{ item.pages }} 页</template>
+            <label v-if="selecting" class="card-selector">
+              <span class="card-selector-box">
+                <input
+                  type="checkbox"
+                  :aria-label="'选择 ' + item.title"
+                  :checked="selectedHrefs.has(item.href)"
+                  :disabled="selectionBusy"
+                  @change="changeSelection(item.href, $event)"
+                />
               </span>
+            </label>
+            <component
+              :is="selecting ? 'div' : 'a'"
+              class="card-link"
+              :href="selecting ? undefined : item.href"
+              @click="!selecting && emit('navigate', $event, item.href)"
+            >
+              <div class="poster">
+                <img v-if="item.cover" :src="item.cover" alt="" loading="lazy" decoding="async" />
+                <Image v-else :size="24" class="muted" aria-hidden="true" />
+                <span v-if="item.progressIndex || item.pages" class="page-count">
+                  <template v-if="item.progressIndex && item.pages >= item.progressIndex">
+                    {{ item.progressIndex }}/{{ item.pages }} 页
+                  </template>
+                  <template v-else-if="item.progressIndex">第 {{ item.progressIndex }} 页</template>
+                  <template v-else>{{ item.pages }} 页</template>
+                </span>
+              </div>
+              <div class="card-meta">
+                <p v-if="item.category" class="category">{{ item.category }}</p>
+                <component :is="group.title ? 'h3' : 'h2'" class="card-title">{{ item.title }}</component>
+                <time
+                  v-if="item.recordedAt !== undefined"
+                  class="posted"
+                  :datetime="new Date(item.recordedAt).toISOString()"
+                >
+                  {{ dateFormat.format(item.recordedAt) }}
+                </time>
+                <p v-else-if="item.posted" class="posted">{{ item.posted }}</p>
+              </div>
+            </component>
+            <div v-if="!selecting && $slots.quickAction" class="card-quick-action">
+              <slot name="quickAction" :item="item" />
             </div>
-            <div class="card-meta">
-              <p v-if="item.category" class="category">{{ item.category }}</p>
-              <component :is="group.title ? 'h3' : 'h2'" class="card-title">{{ item.title }}</component>
-              <time
-                v-if="item.recordedAt !== undefined"
-                class="posted"
-                :datetime="new Date(item.recordedAt).toISOString()"
-              >
-                {{ dateFormat.format(item.recordedAt) }}
-              </time>
-              <p v-else-if="item.posted" class="posted">{{ item.posted }}</p>
-            </div>
-          </component>
-          <div v-if="!selecting && $slots.quickAction" class="card-quick-action">
-            <slot name="quickAction" :item="item" />
-          </div>
-        </li>
+          </article>
+        </GalleryRows>
       </MotionComponent>
     </template>
     <div v-if="!allItems.length" class="catalog-empty">

@@ -13,6 +13,7 @@ import type {
 import { useCatalogHistoryStore } from '../stores/catalog-history'
 import { usePageCacheStore } from '../stores/page-cache'
 import { appendUnique } from '../utils/append-unique'
+import { captureScrollPosition, type GalleryScrollAnchor, type GalleryScrollPosition } from '../utils/gallery-scroll'
 import { firstReaderIndex, queuedReaderPage, readerFrame, readerHasNext } from '../utils/reader-frames'
 import { createReaderPageResolver } from '../utils/reader-pages'
 import { libraryPage, type LibraryPage } from '../utils/reading-library-route'
@@ -114,7 +115,8 @@ export function useNavigation(
     loader,
     readerGalleryUrl,
   )
-  const scrollPositions = new Map<string, number>()
+  const scrollPositions = new Map<string, GalleryScrollPosition>()
+  const galleryRestoration = shallowRef<GalleryScrollAnchor>()
   const catalogHistory = useCatalogHistoryStore()
   let entryId = navigationState()?.entryId ?? newHistoryId()
   if (!navigationState()?.entryId) history.replaceState({ ...navigationState(), entryId }, '')
@@ -212,6 +214,7 @@ export function useNavigation(
     mode: NavigationMode = 'push',
     index?: number,
     queue?: QueuePosition,
+    source?: EventTarget | null,
   ) {
     if (!url) return
     const reload = mode === 'refresh'
@@ -300,11 +303,11 @@ export function useNavigation(
       const previousState = navigationState()
       const nextId = push ? newHistoryId() : (previousState?.entryId ?? newHistoryId())
       const state = { ...previousState, entryId: nextId, readingQueue: readerQueue } satisfies NavigationState
-      const scrollTop = viewport.value?.scrollTop ?? 0
       if (!reload) {
+        const position = captureScrollPosition(viewport.value, source)
         if (page.value.kind === 'catalog') {
-          catalogHistory.save(entryId, { url: currentUrl.value, page: page.value, scrollTop })
-        } else scrollPositions.set(currentUrl.value, scrollTop)
+          catalogHistory.save(entryId, { url: currentUrl.value, page: page.value, ...position })
+        } else scrollPositions.set(currentUrl.value, position)
       }
       if (push) {
         history.pushState(
@@ -327,6 +330,7 @@ export function useNavigation(
         history.replaceState(state, '', entry.url)
       }
       entryId = nextId
+      galleryRestoration.value = undefined
       currentUrl.value = entry.url
       readerEndSpace.value = 0
       readingQueue.value = readerQueue?.chapters
@@ -342,10 +346,9 @@ export function useNavigation(
       document.title = entry.page.title + ' · Better EH'
       await nextTick()
       if (request.signal.aborted) return
-      viewport.value?.scrollTo({
-        top: restored?.scrollTop ?? (mode === 'pop' && !readerQueue ? (scrollPositions.get(entry.url) ?? 0) : 0),
-        behavior: 'instant',
-      })
+      const position = restored ?? (mode === 'pop' && !readerQueue ? scrollPositions.get(entry.url) : undefined)
+      viewport.value?.scrollTo({ top: position?.scrollTop ?? 0, behavior: 'instant' })
+      galleryRestoration.value = position?.anchor
       readerExit?.cancel()
       readerEntrance = readerSurface?.animate(
         [
@@ -559,6 +562,7 @@ export function useNavigation(
   })
   return {
     currentUrl,
+    galleryRestoration,
     page,
     pending,
     failure,

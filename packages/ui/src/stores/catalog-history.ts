@@ -1,11 +1,11 @@
 import { defineStore } from 'pinia'
 import { shallowRef, triggerRef } from 'vue'
 import type { CatalogPage } from '@better-eh/core'
+import type { GalleryScrollPosition } from '../utils/gallery-scroll'
 
-interface CatalogSnapshot {
+interface CatalogSnapshot extends GalleryScrollPosition {
   url: string
   page: CatalogPage
-  scrollTop: number
 }
 
 const snapshotLimit = 12
