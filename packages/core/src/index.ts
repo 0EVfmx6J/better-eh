@@ -1,3 +1,4 @@
+export { commentBody, linkifyComment } from './comment-text'
 export { catalogCacheGroup, createPageLoader, nativePageFlag } from './navigation'
 export type { PageCache, PageEntry } from './navigation'
 export { createTagDirectoryLoader } from './tag-directory'

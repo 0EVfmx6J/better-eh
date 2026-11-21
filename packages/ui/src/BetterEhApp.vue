@@ -261,6 +261,12 @@ function activate(event: MouseEvent, url: string | undefined) {
   void navigate(url, 'push', undefined, undefined, event.currentTarget)
 }
 
+function openCommentLink(event: MouseEvent, href: string): void {
+  const url = new URL(href)
+  const { kind } = props.adapter.pageCacheGroup(url)
+  if (!url.hash && (kind === 'gallery' || kind === 'reader')) activate(event, href)
+}
+
 function startGalleryReading(event: MouseEvent): void {
   if (galleryReadHref.value) activate(event, galleryReadHref.value)
   else void navigate(readingGallery.value?.href, 'gallery-start')
@@ -399,7 +405,11 @@ function goBack(event: MouseEvent) {
         :saved-for-later="savedForLater"
         :bookmarks-busy="bookmarksBusy"
         :active-tag="tagSearch?.tag"
+        :active="viewActive?.value !== false"
+        :load-comments="navigation.loadGalleryComments"
+        :refresh-comments="navigation.refreshGalleryComments"
         @navigate="activate"
+        @open-comment-link="openCommentLink"
         @start-reading="startGalleryReading"
         @toggle-bookmark="toggleReadLater($event.currentTarget, readingGallery)"
         @tag="openTagSearch"

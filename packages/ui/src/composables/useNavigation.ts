@@ -541,6 +541,8 @@ export function useNavigation(
     cancelReaderSeek,
     returnToReaderStart,
     loadMore,
+    loadGalleryComments: loader.loadComments,
+    refreshGalleryComments: loader.refreshGalleryComments,
     retryLoadMore,
     commitTagChange,
   }

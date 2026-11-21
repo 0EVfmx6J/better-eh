@@ -44,6 +44,25 @@ export interface GalleryTag {
   searchTerm?: string
 }
 
+export interface GalleryCommentPart {
+  text: string
+  href?: string
+}
+
+export interface GalleryComment {
+  id: string
+  author: string
+  posted: string
+  body: GalleryCommentPart[]
+  score?: number
+}
+
+export interface GalleryComments {
+  items: GalleryComment[]
+  total?: number
+  moreHref?: string
+}
+
 export interface GalleryPage extends GallerySummary, PageLinks {
   kind: 'gallery'
   subtitle: string
@@ -52,6 +71,7 @@ export interface GalleryPage extends GallerySummary, PageLinks {
   rating: string
   tags: GalleryTag[]
   thumbnails: Thumbnail[]
+  comments?: GalleryComments
 }
 
 export interface ReaderFrame {
@@ -141,9 +161,11 @@ export interface SiteAdapter {
   canonicalGalleryUrl?: (url: URL) => string
   readerPageUrl?: (gallery: URL, index: number) => string | undefined
   galleryThumbnailPageUrl?: (gallery: URL, batch: number) => string
+  galleryCommentsUrl?: (gallery: URL) => string | undefined
   navigation?: (url: URL) => SiteNavigationItem[]
   search: (url: URL, query: string) => string
   loadTagDirectory?: () => Promise<TagDirectory>
   completeTags?: CompleteTags
+  parseCommentsResponse?: (body: string, url: URL) => GalleryComments
   parse: (document: Document | DocumentFragment, url: URL) => SitePage | undefined
 }

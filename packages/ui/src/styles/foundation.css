@@ -66,7 +66,7 @@ svg {
 .eh-app:not(.is-reader) {
   scrollbar-gutter: stable;
 }
-.eh-app.stop-scroll {
+.stop-scroll {
   @apply overflow-y-hidden;
 }
 .shell {

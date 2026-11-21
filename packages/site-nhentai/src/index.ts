@@ -1,5 +1,6 @@
 import { catalogCacheGroup, type SiteAdapter } from '@better-eh/core'
 import { parseCatalog } from './catalog'
+import { galleryCommentsUrl, parseCommentsResponse } from './comments'
 import { positiveInteger } from './dom'
 import { parseGallery } from './gallery'
 import { parseReader } from './reader'
@@ -36,6 +37,8 @@ export const nhentaiAdapter: SiteAdapter = {
     return query ? searchUrl(url, query) : new URL('/', url).href
   },
   completeTags,
+  parseCommentsResponse,
+  galleryCommentsUrl,
   loadTagDirectory,
   parse(doc, url) {
     const reader = readerPath.exec(url.pathname)

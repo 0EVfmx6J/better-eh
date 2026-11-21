@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ArrowRight } from '@lucide/vue'
 import { computed, useId } from 'vue'
-import type { GalleryPage, GalleryTag, ReadingProgress } from '@better-eh/core'
+import type { GalleryComments as Comments, GalleryPage, GalleryTag, ReadingProgress } from '@better-eh/core'
 import { provideGalleryResizePosition } from '../composables/provideGalleryResizePosition'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import ActionButton from './ActionButton.vue'
 import BookmarkButton from './BookmarkButton.vue'
+import GalleryComments from './GalleryComments.vue'
 import GalleryRows from './GalleryRows.vue'
 import ThumbnailTile from './ThumbnailTile.vue'
 
@@ -16,6 +17,9 @@ const props = defineProps<{
   savedForLater: boolean
   bookmarksBusy: boolean
   activeTag?: GalleryTag
+  active: boolean
+  loadComments: (href: string, signal: AbortSignal, refresh: boolean) => Promise<Comments>
+  refreshComments: (href: string, signal: AbortSignal) => Promise<Comments>
 }>()
 const tags = useTagDirectoryStore()
 const thumbnailsHeading = useId()
@@ -28,6 +32,7 @@ function estimateThumbnailRowSize(_items: readonly unknown[], width: number): nu
 
 const emit = defineEmits<{
   navigate: [event: MouseEvent, href: string]
+  openCommentLink: [event: MouseEvent, href: string]
   startReading: [event: MouseEvent]
   toggleBookmark: [event: MouseEvent]
   tag: [event: MouseEvent, tag: GalleryTag]
@@ -131,11 +136,22 @@ const galleryTagGroups = computed(() => {
       </div>
     </dl>
   </section>
-  <div class="section-title flex items-center justify-between gap-4">
-    <h2 :id="thumbnailsHeading">页面缩略图</h2>
-    <span v-if="page.thumbnails.length" class="count"
-      >{{ page.thumbnails[0]?.index }}–{{ page.thumbnails.at(-1)?.index }} 页</span
-    >
+  <div class="section-title flex items-center justify-between gap-2">
+    <div class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+      <h2 :id="thumbnailsHeading">页面缩略图</h2>
+      <span v-if="page.thumbnails.length" class="count whitespace-nowrap">
+        {{ page.thumbnails[0]?.index }}–{{ page.thumbnails.at(-1)?.index }} 页
+      </span>
+    </div>
+    <GalleryComments
+      :key="page.href"
+      :gallery-href="page.href"
+      :comments="page.comments"
+      :active="active"
+      :load-comments="loadComments"
+      :refresh-comments="refreshComments"
+      @navigate="(event, href) => emit('openCommentLink', event, href)"
+    />
   </div>
   <GalleryRows
     v-if="page.thumbnails.length"

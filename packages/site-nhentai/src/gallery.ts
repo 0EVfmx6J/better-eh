@@ -1,4 +1,5 @@
 import type { GalleryPage, GalleryTag, Thumbnail } from '@better-eh/core'
+import { parseComments } from './comments'
 import { imageUrl, localLink, positiveInteger, text, type SiteDocument } from './dom'
 import { galleryUrl, readerPath, readerUrl, searchUrl, tagPath } from './urls'
 
@@ -75,5 +76,6 @@ export function parseGallery(doc: SiteDocument, base: URL, id: string): GalleryP
     rating: '',
     tags,
     thumbnails,
+    comments: parseComments(doc, base, id),
   }
 }

@@ -101,7 +101,8 @@ export function usePullToRefresh(
       element.scrollTop > 1 ||
       (window.visualViewport?.scale ?? 1) > 1.01 ||
       (target instanceof Element &&
-        target.closest('input, select, textarea, [contenteditable], dialog, .filters, .site-sidebar, .tag-suggestions'))
+        (target.closest('dialog') !== element.closest('dialog') ||
+          target.closest('input, select, textarea, [contenteditable], .filters, .site-sidebar, .tag-suggestions')))
     ) {
       return
     }

@@ -9,6 +9,7 @@ import type {
   SiteAdapter,
   Thumbnail,
 } from '@better-eh/core'
+import { parseComments } from './comments'
 import { catalogPaginationParams, ehNavigation, ehPageCacheGroup, isNativePage } from './navigation'
 import { exactTagTerm, loadTagDirectory } from './tag-directory'
 import { parseTags } from './tags'
@@ -157,6 +158,7 @@ function parseGallery(doc: SiteDocument, base: URL): GalleryPage | undefined {
     thumbnails: Array.from(doc.querySelectorAll<HTMLAnchorElement>('#gdt a[href*="/s/"]')).flatMap(
       (anchor) => thumbnail(anchor, base) ?? [],
     ),
+    comments: parseComments(doc, base),
     ...thumbnailLinks(doc, base),
   }
 }

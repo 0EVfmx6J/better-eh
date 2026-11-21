@@ -42,6 +42,42 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
     return task
   }
 
+  async function read<T>(
+    url: URL,
+    signal: AbortSignal,
+    refresh: boolean,
+    parse: (body: string, finalUrl: URL) => T,
+  ): Promise<T> {
+    if (signal.aborted) throw signal.reason
+    if (blockedUntil > Date.now()) throw new Error('站点触发了访问限流，请稍后重试。')
+    const wait = availableAt - Date.now()
+    if (wait > 0) await delay(wait)
+    if (signal.aborted) throw signal.reason
+
+    try {
+      const response = await fetch(url, { credentials: 'same-origin', signal, cache: refresh ? 'reload' : 'default' })
+      const body = await response.text()
+      if (
+        response.status === 429 ||
+        /(?:temporarily banned|excessive pageloads|too many requests)/i.test(body.slice(0, 1600))
+      ) {
+        const retryAfter = response.headers.get('Retry-After')
+        const milliseconds =
+          retryAfter && /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter ?? '') - Date.now()
+        blockedUntil = Date.now() + (milliseconds > 0 ? milliseconds : 60_000)
+        throw new Error('站点触发了访问限流，请稍后重试。')
+      }
+      if (!response.ok) throw new Error('站点返回 HTTP ' + response.status + '。')
+      const finalUrl = new URL(response.url || url.href)
+      if (finalUrl.origin !== url.origin || (response.redirected && /^\/login\/?$/.test(finalUrl.pathname))) {
+        throw new Error('请在原站完成登录后重试。')
+      }
+      return parse(body, finalUrl)
+    } finally {
+      availableAt = Math.max(availableAt, Date.now() + 900)
+    }
+  }
+
   function load(href: string, signal: AbortSignal, refresh = false): Promise<PageEntry> {
     const url = pageUrl(href)
     if (url.origin !== location.origin) return Promise.reject(new Error('此链接需要在原站打开。'))
@@ -50,31 +86,7 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
       const group = adapter.pageCacheGroup(url)
       const cached = cache.get(group, url.href)
       if (cached && !refresh) return cached
-      if (blockedUntil > Date.now()) throw new Error('站点触发了访问限流，请稍后重试。')
-      const wait = availableAt - Date.now()
-      if (wait > 0) await delay(wait)
-      if (signal.aborted) throw signal.reason
-
-      try {
-        const response = await fetch(url, { credentials: 'same-origin', signal, cache: refresh ? 'reload' : 'default' })
-        const html = await response.text()
-        if (
-          response.status === 429 ||
-          /(?:temporarily banned|excessive pageloads|too many requests)/i.test(html.slice(0, 1600))
-        ) {
-          const retryAfter = response.headers.get('Retry-After')
-          const milliseconds =
-            retryAfter && /^\d+$/.test(retryAfter)
-              ? Number(retryAfter) * 1000
-              : Date.parse(retryAfter ?? '') - Date.now()
-          blockedUntil = Date.now() + (milliseconds > 0 ? milliseconds : 60_000)
-          throw new Error('站点触发了访问限流，请稍后重试。')
-        }
-        if (!response.ok) throw new Error('站点返回 HTTP ' + response.status + '。')
-        const finalUrl = new URL(response.url || url.href)
-        if (finalUrl.origin !== url.origin || (response.redirected && /^\/login\/?$/.test(finalUrl.pathname))) {
-          throw new Error('请在原站完成登录后重试。')
-        }
+      return read(url, signal, refresh, (html, finalUrl) => {
         const template = document.createElement('template')
         template.innerHTML = html
         const page = adapter.parse(template.content, finalUrl)
@@ -83,10 +95,31 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
         const entry = { url: finalUrl.href, page }
         cache.set(group, url.href, entry)
         return entry
-      } finally {
-        availableAt = Math.max(availableAt, Date.now() + 900)
-      }
+      })
     })
+  }
+
+  async function loadComments(href: string, signal: AbortSignal, refresh: boolean) {
+    const { parseCommentsResponse } = adapter
+    if (parseCommentsResponse) {
+      const url = pageUrl(href)
+      if (url.origin !== location.origin) throw new Error('评论链接无效。')
+      return enqueue(() => read(url, signal, refresh, parseCommentsResponse))
+    }
+    const comments = await readGalleryComments(href, signal, refresh)
+    if (comments.moreHref) throw new Error('无法读取完整评论。')
+    return comments
+  }
+
+  async function readGalleryComments(href: string, signal: AbortSignal, refresh: boolean) {
+    const { page } = await load(href, signal, refresh)
+    if (page.kind !== 'gallery' || !page.comments) throw new Error('无法读取评论。')
+    return page.comments
+  }
+
+  function refreshGalleryComments(href: string, signal: AbortSignal) {
+    const url = adapter.galleryCommentsUrl?.(pageUrl(href))
+    return url ? loadComments(url, signal, true) : readGalleryComments(href, signal, true)
   }
 
   function submitTagChange(href: string, page: TagsPage, change: TagChange): Promise<TagsPage> {
@@ -105,5 +138,5 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
     })
   }
 
-  return { load, submitTagChange }
+  return { load, loadComments, refreshGalleryComments, submitTagChange }
 }

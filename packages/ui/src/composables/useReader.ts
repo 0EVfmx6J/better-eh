@@ -2,6 +2,7 @@ import { useInfiniteScroll, useScroll, useTimeoutFn } from '@vueuse/core'
 import { computed, nextTick, onMounted, shallowRef, watch, type Ref } from 'vue'
 import { isPrimaryClick } from '../utils/is-primary-click'
 import { readerFrame } from '../utils/reader-frames'
+import { stopScrollMomentum } from '../utils/stop-scroll-momentum'
 import type { useNavigation } from './useNavigation'
 
 interface ReaderOptions {
@@ -176,10 +177,7 @@ export function useReader({
 
     if (isScrolling.value) {
       stoppingScroll = true
-      // Let WebKit render a frame with scrolling disabled to stop deceleration.
-      viewport.classList.add('stop-scroll')
-      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-      viewport.classList.remove('stop-scroll')
+      await stopScrollMomentum(viewport)
       stoppingScroll = false
       if (app.value !== viewport || pending.value || (queue ? readingQueue.value !== queue : currentUrl.value !== url))
         return

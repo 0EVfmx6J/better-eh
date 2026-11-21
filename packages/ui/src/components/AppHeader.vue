@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowDown, ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
+import { ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
 import { onClickOutside } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useTemplateRef } from 'vue'
@@ -7,6 +7,7 @@ import type { CompleteTags } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
 import BookmarkButton from './BookmarkButton.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
+import PullRefreshIndicator from './PullRefreshIndicator.vue'
 import TagSearchBox from './TagSearchBox.vue'
 
 defineProps<{
@@ -194,12 +195,6 @@ defineExpose({
       </Teleport>
     </div>
     <div v-if="busy" class="progress-bar" role="progressbar" aria-label="正在加载页面" />
-    <div v-if="pullOffset > 0" class="pull-refresh-reveal" :style="{ height: pullOffset + 'px' }" aria-hidden="true">
-      <span class="pull-refresh-chip">
-        <LoadingSpinner v-if="refreshing" :size="16" />
-        <ArrowDown v-else :size="16" :class="{ 'pull-refresh-ready': pullReady }" />
-        {{ refreshing ? '正在刷新' : pullReady ? '松手刷新' : '下拉刷新' }}
-      </span>
-    </div>
+    <PullRefreshIndicator :offset="pullOffset" :ready="pullReady" :refreshing="refreshing" />
   </header>
 </template>
