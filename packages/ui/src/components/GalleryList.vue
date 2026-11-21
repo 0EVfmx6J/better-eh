@@ -6,13 +6,13 @@
   "
 >
 import { Grid2X2, Image, List } from '@lucide/vue'
-import { useEventListener, usePreferredReducedMotion } from '@vueuse/core'
+import { usePreferredReducedMotion } from '@vueuse/core'
 import { MotionComponent } from '@vueuse/motion'
 import { storeToRefs } from 'pinia'
-import { computed, inject, nextTick, provide, shallowRef, useId, useTemplateRef, watch } from 'vue'
+import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { ReadingGallery } from '@better-eh/core'
+import { provideGalleryResizePosition } from '../composables/provideGalleryResizePosition'
 import { usePreferencesStore } from '../stores/preferences'
-import { galleryResizePositionKey, galleryViewportKey, type GalleryResizePosition } from '../utils/gallery-scroll'
 import ActionButton from './ActionButton.vue'
 import GalleryRows from './GalleryRows.vue'
 
@@ -45,22 +45,19 @@ const dateFormat = new Intl.DateTimeFormat('zh-CN', { dateStyle: 'medium', timeS
 const selectionStart = useTemplateRef<HTMLButtonElement>('selectionStart')
 const selectionExit = useTemplateRef<HTMLButtonElement>('selectionExit')
 const selectedHrefs = shallowRef(new Set<string>())
-const viewport = inject(galleryViewportKey)?.viewport
-const resizePosition = shallowRef<GalleryResizePosition>()
-provide(galleryResizePositionKey, resizePosition)
-useEventListener(
-  () => viewport?.value,
-  'scroll',
-  () => {
-    const scroll = viewport?.value
-    const top = resizePosition.value?.scrollTop
-    if (!scroll || top === undefined || Math.abs(scroll.scrollTop - top) <= 1) return
-    // A taller viewport can clamp scrollTop at the end before the resize is applied.
-    const clampedTop = Math.min(top, Math.max(0, scroll.scrollHeight - scroll.clientHeight))
-    if (Math.abs(scroll.scrollTop - clampedTop) > 1) resizePosition.value = undefined
-  },
-  { passive: true },
-)
+provideGalleryResizePosition()
+const estimateRowSize = computed(() => {
+  const listView = layout.value === 'list'
+  return (items: readonly Item[], cardWidth: number) => {
+    // The poster has a 4:5 aspect ratio. Estimate the metadata from the lines each card displays.
+    let metaHeight = 68.4
+    for (const item of items) {
+      const lines = Number(Boolean(item.category)) + Number(item.recordedAt !== undefined || Boolean(item.posted))
+      metaHeight = Math.max(metaHeight, 68.4 + 16.5 * lines)
+    }
+    return 2 + (listView ? Math.max(102.5, metaHeight) : Math.max(0, cardWidth - 2) * 1.25 + metaHeight)
+  }
+})
 const groups = computed(() => {
   const main = { id: 'main', title: props.itemsTitle, items: props.items }
   return props.featured ? [{ id: 'featured', ...props.featured }, main] : [main]
@@ -183,9 +180,11 @@ function toggleAll(): void {
       >
         <GalleryRows
           v-slot="{ item, position }"
+          class="catalog-grid"
+          :class="{ 'list-view': layout === 'list' }"
           :items="group.items"
           :group="group.id"
-          :list-view="layout === 'list'"
+          :estimate-row-size="estimateRowSize"
           :aria-labelledby="group.title ? headingId + '-' + group.id : headingId"
         >
           <article

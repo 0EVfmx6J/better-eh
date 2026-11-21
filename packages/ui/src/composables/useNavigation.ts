@@ -10,8 +10,8 @@ import type {
   SitePage,
   TagChange,
 } from '@better-eh/core'
-import { useCatalogHistoryStore } from '../stores/catalog-history'
 import { usePageCacheStore } from '../stores/page-cache'
+import { usePagedHistoryStore } from '../stores/paged-history'
 import { appendUnique } from '../utils/append-unique'
 import { captureScrollPosition, type GalleryScrollAnchor, type GalleryScrollPosition } from '../utils/gallery-scroll'
 import { firstReaderIndex, queuedReaderPage, readerFrame, readerHasNext } from '../utils/reader-frames'
@@ -117,7 +117,7 @@ export function useNavigation(
   )
   const scrollPositions = new Map<string, GalleryScrollPosition>()
   const galleryRestoration = shallowRef<GalleryScrollAnchor>()
-  const catalogHistory = useCatalogHistoryStore()
+  const pagedHistory = usePagedHistoryStore()
   let entryId = navigationState()?.entryId ?? newHistoryId()
   if (!navigationState()?.entryId) history.replaceState({ ...navigationState(), entryId }, '')
   let active: AbortController | undefined
@@ -265,7 +265,7 @@ export function useNavigation(
         target = await readerTargetUrl(current, index, request.signal)
       }
       const local = localPage(target)
-      const restored = mode === 'pop' ? catalogHistory.restore(navigationState()?.entryId, target) : undefined
+      const restored = mode === 'pop' ? pagedHistory.restore(navigationState()?.entryId, target) : undefined
       let entry: { url: string; page: Page } = local
         ? { url: target, page: local }
         : (restored ?? (await loader.load(target, request.signal, reload)))
@@ -305,8 +305,8 @@ export function useNavigation(
       const state = { ...previousState, entryId: nextId, readingQueue: readerQueue } satisfies NavigationState
       if (!reload) {
         const position = captureScrollPosition(viewport.value, source)
-        if (page.value.kind === 'catalog') {
-          catalogHistory.save(entryId, { url: currentUrl.value, page: page.value, ...position })
+        if (page.value.kind === 'catalog' || page.value.kind === 'gallery') {
+          pagedHistory.save(entryId, { url: currentUrl.value, page: page.value, ...position })
         } else scrollPositions.set(currentUrl.value, position)
       }
       if (push) {
@@ -543,7 +543,7 @@ export function useNavigation(
     savingTags.value = true
     try {
       const updated = await loader.submitTagChange(currentUrl.value, current, change)
-      catalogHistory.clear()
+      pagedHistory.clearCatalogs()
       if (page.value.kind === 'tags' && page.value.activeGroup === updated.activeGroup) page.value = updated
     } finally {
       savingTags.value = false

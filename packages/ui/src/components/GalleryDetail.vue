@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ArrowRight } from '@lucide/vue'
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 import type { GalleryPage, GalleryTag, ReadingProgress } from '@better-eh/core'
+import { provideGalleryResizePosition } from '../composables/provideGalleryResizePosition'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import ActionButton from './ActionButton.vue'
 import BookmarkButton from './BookmarkButton.vue'
+import GalleryRows from './GalleryRows.vue'
 import ThumbnailTile from './ThumbnailTile.vue'
 
 const props = defineProps<{
@@ -16,6 +18,14 @@ const props = defineProps<{
   activeTag?: GalleryTag
 }>()
 const tags = useTagDirectoryStore()
+const thumbnailsHeading = useId()
+provideGalleryResizePosition()
+
+function estimateThumbnailRowSize(_items: readonly unknown[], width: number): number {
+  // The 4:5 image is inside a 1px border, with an 18px page number and 8px padding below it.
+  return Math.max(0, width - 2) * 1.25 + 28
+}
+
 const emit = defineEmits<{
   navigate: [event: MouseEvent, href: string]
   startReading: [event: MouseEvent]
@@ -122,23 +132,37 @@ const galleryTagGroups = computed(() => {
     </dl>
   </section>
   <div class="section-title flex items-center justify-between gap-4">
-    <h2>页面缩略图</h2>
+    <h2 :id="thumbnailsHeading">页面缩略图</h2>
     <span v-if="page.thumbnails.length" class="count"
       >{{ page.thumbnails[0]?.index }}–{{ page.thumbnails.at(-1)?.index }} 页</span
     >
   </div>
-  <div v-if="page.thumbnails.length" class="thumbnails">
-    <a
-      v-for="thumb in page.thumbnails"
-      :key="thumb.href"
-      :href="thumb.href"
-      class="thumbnail"
-      :aria-label="'阅读第 ' + thumb.index + ' 页'"
-      @click="emit('navigate', $event, thumb.href)"
+  <GalleryRows
+    v-if="page.thumbnails.length"
+    :key="page.href"
+    v-slot="{ item: thumb, position }"
+    class="thumbnails"
+    group="thumbnails"
+    :aria-labelledby="thumbnailsHeading"
+    :items="page.thumbnails"
+    :estimate-row-size="estimateThumbnailRowSize"
+  >
+    <div
+      role="listitem"
+      :aria-posinset="position"
+      :aria-setsize="page.thumbnails.length"
+      :data-gallery-href="thumb.href"
     >
-      <ThumbnailTile :thumb="thumb" />
-      <span class="thumbnail-number block p-1 text-[12px] tabular-nums">{{ thumb.index }}</span>
-    </a>
-  </div>
+      <a
+        :href="thumb.href"
+        class="thumbnail"
+        :aria-label="'阅读第 ' + thumb.index + ' 页'"
+        @click="emit('navigate', $event, thumb.href)"
+      >
+        <ThumbnailTile :thumb="thumb" />
+        <span class="thumbnail-number block p-1 text-[12px] tabular-nums">{{ thumb.index }}</span>
+      </a>
+    </div>
+  </GalleryRows>
   <p v-else class="empty">没有可用的页面缩略图。</p>
 </template>

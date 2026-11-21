@@ -64,19 +64,22 @@
   @apply opacity-85;
 }
 
-.eh-app:has(.catalog-grid) {
+.eh-app:has(.gallery-rows) {
   overflow-anchor: none;
 }
-.catalog-grid {
-  --catalog-min-column-width: 192px;
-  --catalog-gap: 18px;
-  --catalog-fixed-columns: 0;
-  @apply relative mt-[18px];
+.gallery-rows {
+  --gallery-fixed-columns: 0;
+  @apply relative;
 }
-.catalog-row {
+.catalog-grid {
+  --gallery-min-column-width: 192px;
+  --gallery-gap: 18px;
+  @apply mt-[18px];
+}
+.gallery-row {
   @apply absolute inset-x-0 top-0 grid;
-  grid-template-columns: repeat(var(--catalog-columns), minmax(0, 1fr));
-  column-gap: var(--catalog-gap);
+  grid-template-columns: repeat(var(--gallery-columns), minmax(0, 1fr));
+  column-gap: var(--gallery-gap);
 }
 .catalog-empty,
 .library-notice {
@@ -229,8 +232,8 @@
   @apply tabular-nums;
 }
 .list-view {
-  --catalog-min-column-width: 360px;
-  --catalog-gap: 10px;
+  --gallery-min-column-width: 360px;
+  --gallery-gap: 10px;
 }
 .list-view .card-link {
   @apply flex-row items-center;
@@ -340,25 +343,14 @@
   @apply text-[18px];
 }
 .thumbnails {
-  @apply grid;
-  grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
-  @apply gap-[9px];
+  --gallery-min-column-width: 95px;
+  --gallery-gap: 9px;
 }
 .thumbnail {
-  @apply overflow-hidden;
+  @apply block overflow-hidden;
   border: 1px solid var(--line);
-  @apply rounded-lg bg-surface text-center opacity-100;
-  transform: translateY(0);
-  transition:
-    opacity 360ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 0.18s;
-}
-@starting-style {
-  .thumbnail {
-    @apply opacity-0;
-    transform: translateY(14px);
-  }
+  @apply rounded-lg bg-surface text-center;
+  transition: border-color 0.18s;
 }
 .thumbnail:hover {
   @apply border-muted;
@@ -398,14 +390,14 @@
     margin-block: 14px 10px;
   }
   .catalog-grid {
-    --catalog-fixed-columns: 2;
-    --catalog-gap: 10px;
+    --gallery-fixed-columns: 2;
+    --gallery-gap: 10px;
   }
   .list-view {
-    --catalog-fixed-columns: 1;
+    --gallery-fixed-columns: 1;
   }
   .thumbnails {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    --gallery-fixed-columns: 4;
   }
   .detail-with-cover {
     grid-template-columns: minmax(87px, 29%) minmax(0, 1fr);

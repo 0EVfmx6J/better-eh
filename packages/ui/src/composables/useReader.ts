@@ -196,7 +196,10 @@ export function useReader({
       void returnToReaderStart()
       return
     }
-    if (!reducedMotion.value && (page.value.kind === 'catalog' || page.value.kind === 'library')) {
+    if (
+      !reducedMotion.value &&
+      (page.value.kind === 'catalog' || page.value.kind === 'library' || page.value.kind === 'gallery')
+    ) {
       returningToTop.value = true
       scheduleReturnToTopEnd()
     }

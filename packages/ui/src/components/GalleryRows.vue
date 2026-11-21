@@ -1,18 +1,13 @@
-<script
-  setup
-  lang="ts"
-  generic="Item extends ReadingGallery & { category?: string; posted?: string; recordedAt?: number }"
->
+<script setup lang="ts" generic="Item extends { href: string }">
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/vue-virtual'
 import { useResizeObserver } from '@vueuse/core'
 import { computed, inject, nextTick, onScopeDispose, shallowRef, useTemplateRef, watch } from 'vue'
-import type { ReadingGallery } from '@better-eh/core'
 import { galleryResizePositionKey, galleryViewportKey, type GalleryScrollAnchor } from '../utils/gallery-scroll'
 
 const props = defineProps<{
   items: readonly Item[]
   group: string
-  listView: boolean
+  estimateRowSize: (items: readonly Item[], itemWidth: number) => number
 }>()
 defineSlots<{
   default: (props: { item: Item; position: number }) => unknown
@@ -55,9 +50,9 @@ function updateGeometry(): void {
   const { width } = bounds
   if (!width) return
   const style = getComputedStyle(node)
-  const gap = Number.parseFloat(style.getPropertyValue('--catalog-gap'))
-  const minWidth = Number.parseFloat(style.getPropertyValue('--catalog-min-column-width'))
-  const fixedColumns = Number(style.getPropertyValue('--catalog-fixed-columns'))
+  const gap = Number.parseFloat(style.getPropertyValue('--gallery-gap'))
+  const minWidth = Number.parseFloat(style.getPropertyValue('--gallery-min-column-width'))
+  const fixedColumns = Number(style.getPropertyValue('--gallery-fixed-columns'))
   const columns = fixedColumns || Math.max(1, Math.floor((width + gap) / (minWidth + gap)))
   const offset = Math.round(bounds.top - scroll.getBoundingClientRect().top + scroll.scrollTop)
   const headerHeight = scroll.querySelector('.masthead')?.getBoundingClientRect().height ?? 0
@@ -80,8 +75,7 @@ const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(
   computed(() => {
     const { width, columns, gap, offset } = geometry.value
     const cardWidth = (width - (columns - 1) * gap) / columns
-    const { listView } = props
-    const items = props.items
+    const { items, estimateRowSize } = props
     return {
       count: count.value,
       enabled: width > 0,
@@ -92,15 +86,7 @@ const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(
       overscan: 3,
       useAnimationFrameWithResizeObserver: true,
       rangeExtractor: rangeExtractor.value,
-      estimateSize(index: number) {
-        // The poster has a 4:5 aspect ratio. Estimate the metadata from the lines each card displays.
-        let metaHeight = 68.4
-        for (const item of items.slice(index * columns, (index + 1) * columns)) {
-          const lines = Number(Boolean(item.category)) + Number(item.recordedAt !== undefined || Boolean(item.posted))
-          metaHeight = Math.max(metaHeight, 68.4 + 16.5 * lines)
-        }
-        return 2 + (listView ? Math.max(102.5, metaHeight) : Math.max(0, cardWidth - 2) * 1.25 + metaHeight)
-      },
+      estimateSize: (index) => estimateRowSize(items.slice(index * columns, (index + 1) * columns), cardWidth),
       measureElement(element, entry, instance) {
         const box = entry?.borderBoxSize[0]
         const bounds = box ?? element.getBoundingClientRect()
@@ -146,10 +132,10 @@ watch(
   { immediate: true, flush: 'sync' },
 )
 
-watch([list, viewport, () => props.listView], updateGeometry, { flush: 'post' })
+watch([list, viewport, () => props.estimateRowSize], updateGeometry, { flush: 'post' })
 let geometryFrame = 0
 useResizeObserver(
-  () => [viewport.value, viewport.value?.querySelector('.masthead'), list.value, list.value?.closest('section')],
+  () => [viewport.value, viewport.value?.querySelector('.masthead'), list.value, list.value?.closest('main')],
   () => {
     cancelAnimationFrame(geometryFrame)
     geometryFrame = requestAnimationFrame(updateGeometry)
@@ -161,7 +147,7 @@ onScopeDispose(() => {
 })
 
 function measureRows(): void {
-  list.value?.querySelectorAll<HTMLElement>('.catalog-row').forEach(virtualizer.value.measureElement)
+  list.value?.querySelectorAll<HTMLElement>('.gallery-row').forEach(virtualizer.value.measureElement)
 }
 
 function measureRow(element: unknown): void {
@@ -169,7 +155,7 @@ function measureRow(element: unknown): void {
 }
 
 watch(
-  [() => geometry.value.width, columns, () => props.listView],
+  [() => geometry.value.width, columns, () => props.estimateRowSize],
   async () => {
     virtualizer.value.measure()
     await nextTick()
@@ -243,9 +229,8 @@ watch(
 <template>
   <div
     ref="list"
-    class="catalog-grid"
-    :class="{ 'list-view': listView }"
-    :style="{ height: virtualizer.getTotalSize() + 'px', '--catalog-columns': columns }"
+    class="gallery-rows"
+    :style="{ height: virtualizer.getTotalSize() + 'px', '--gallery-columns': columns }"
     :data-gallery-group="group"
     role="list"
     @focusout="focusedRow = undefined"
@@ -254,7 +239,7 @@ watch(
       v-for="row in rows"
       :key="row.items[0]?.href ?? row.index"
       :ref="measureRow"
-      class="catalog-row"
+      class="gallery-row"
       :data-index="row.index"
       :style="{ transform: `translateY(${row.top}px)` }"
       role="presentation"
