@@ -1,22 +1,19 @@
 .reader-frame {
-  @apply relative mb-[18px] grid min-h-[180px] place-items-center overflow-hidden rounded-ui bg-panel;
-  scroll-margin-top: 88px;
-  @apply opacity-100;
-  transform: translateY(0);
-  transition:
-    opacity 360ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+  @apply grid min-h-[180px] place-items-center overflow-hidden rounded-ui bg-panel;
 }
-@starting-style {
-  .reader-frame {
-    @apply opacity-0;
-    transform: translateY(18px);
-  }
+.eh-app.is-reader {
+  overflow-anchor: none;
 }
-.reader-frame img {
+.reader-surface {
   --reader-image-max-height: max(360px, 69vh);
   /* Keep image sizing stable when mobile browser bars expand or collapse. */
   --reader-image-max-height: max(360px, 69svh);
+}
+.reader-height-probe {
+  @apply pointer-events-none invisible absolute size-0;
+  max-height: var(--reader-image-max-height);
+}
+.reader-frame img {
   @apply max-w-full;
   max-height: var(--reader-image-max-height);
   @apply h-auto w-auto object-contain select-none;

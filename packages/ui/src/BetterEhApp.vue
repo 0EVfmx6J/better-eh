@@ -63,7 +63,7 @@ const {
   loadMoreFailure,
   loadingPrevious,
   loadPreviousFailure,
-  readerEndSpace,
+  readerRevision,
   hasMore,
   hasPrevious,
   loadMore,
@@ -141,6 +141,7 @@ const {
   activeFramePosition,
   readerPagesAhead,
   readerPagesBehind,
+  scrollY,
   brokenImages,
   showBackToTop,
   returningToTop,
@@ -427,13 +428,16 @@ function goBack(event: MouseEvent) {
 
       <ReaderPages
         v-else
+        :key="readerRevision"
         ref="readerPages"
         :title="reader?.title"
         :frames="readerFrames"
-        :active-position="activeFramePosition"
+        :viewport="app"
+        :scroll-top="scrollY"
+        :track-position="!pending"
+        :returning-to-top="returningToTop"
         :pages-ahead="readerPagesAhead"
         :pages-behind="readerPagesBehind"
-        :end-space="readerEndSpace"
         :busy="busy"
         :broken-images="brokenImages"
         :load-previous-failure="loadPreviousFailure"
@@ -441,6 +445,7 @@ function goBack(event: MouseEvent) {
         @retry-previous="retryLoadMore('previous')"
         @image-error="markBroken"
         @retry-image="retryImage"
+        @show-page="navigation.showReaderFrame"
       />
 
       <LoadMoreIndicator

@@ -1,5 +1,5 @@
 import { useEventListener } from '@vueuse/core'
-import { computed, nextTick, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue'
+import { computed, nextTick, onScopeDispose, ref, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { createPageLoader, nativePageFlag } from '@better-eh/core'
 import type {
   CatalogPage,
@@ -10,6 +10,7 @@ import type {
   SitePage,
   TagChange,
 } from '@better-eh/core'
+import type ReaderPages from '../components/ReaderPages.vue'
 import { usePageCacheStore } from '../stores/page-cache'
 import { usePagedHistoryStore } from '../stores/paged-history'
 import { appendUnique } from '../utils/append-unique'
@@ -84,7 +85,8 @@ export function useNavigation(
   const loadMoreFailure = shallowRef<string>()
   const loadingPrevious = ref(false)
   const loadPreviousFailure = shallowRef<string>()
-  const readerEndSpace = ref(0)
+  const readerRevision = ref(0)
+  const readerPages = useTemplateRef<InstanceType<typeof ReaderPages>>('readerPages')
   const readingQueue = shallowRef(initialQueue?.chapters)
   const readerChapter = ref(initialQueue?.chapter ?? 0)
   const tailChapter = ref(readerChapter.value)
@@ -177,27 +179,8 @@ export function useNavigation(
   }
 
   async function scrollToReaderFrame(chapter: number, index: number, signal: AbortSignal): Promise<boolean> {
-    const scroll = viewport.value
-    const frame = scroll?.querySelector<HTMLElement>(
-      `.reader-frame[data-reader-chapter="${chapter}"][data-reader-index="${index}"]`,
-    )
-    if (!scroll || !frame) return false
-    const line = Math.floor(scroll.clientHeight / 3)
-    const headerHeight = scroll.querySelector<HTMLElement>('.masthead')?.offsetHeight ?? 0
-    const offset = Math.min(line, Math.max(headerHeight + 8, line - frame.offsetHeight / 2))
-    const top = Math.max(
-      0,
-      scroll.scrollTop + frame.getBoundingClientRect().top - scroll.getBoundingClientRect().top - offset,
-    )
-    const extra = Math.ceil(top - (scroll.scrollHeight - scroll.clientHeight))
-    if (extra > 0) {
-      readerEndSpace.value += extra
-      await nextTick()
-    }
-    if (!signal.aborted) {
-      scroll.scrollTo({ top, behavior: 'instant' })
-      showReaderFrame(chapter, index)
-    }
+    if (!(await readerPages.value?.scrollToPage(chapter, index, signal))) return false
+    if (!signal.aborted) showReaderFrame(chapter, index)
     return true
   }
 
@@ -332,7 +315,7 @@ export function useNavigation(
       entryId = nextId
       galleryRestoration.value = undefined
       currentUrl.value = entry.url
-      readerEndSpace.value = 0
+      readerRevision.value += 1
       readingQueue.value = readerQueue?.chapters
       readerChapter.value = readerQueue?.chapter ?? 0
       tailChapter.value = readerChapter.value
@@ -425,15 +408,6 @@ export function useNavigation(
     const request = new AbortController()
     appendController = request
     loading.value = true
-    const scroll = viewport.value
-    if (prepend && scroll) {
-      const content = scroll.querySelector('main')
-      if (content) {
-        const gap = scroll.getBoundingClientRect().bottom - content.getBoundingClientRect().bottom
-        // A short reader must already be scrollable when the earlier frame is inserted.
-        if (gap >= 0) readerEndSpace.value += Math.ceil(gap) + 1
-      }
-    }
 
     try {
       const targetUrl =
@@ -450,8 +424,6 @@ export function useNavigation(
       if (request.signal.aborted || page.value !== routePage) return
       if (leading && entry.page.kind !== 'reader') throw new Error('无法加载上一页。')
 
-      const anchor = prepend ? scroll?.querySelector('.reader-frame') : undefined
-      const top = anchor?.getBoundingClientRect().top ?? 0
       if (chapter) {
         if (leading && entry.page.kind === 'reader') {
           earlierSections.value = [
@@ -508,16 +480,6 @@ export function useNavigation(
         }
       }
       errorMessage.value = undefined
-      if (anchor && scroll) {
-        await nextTick()
-        if (request.signal.aborted) return
-        // Read the actual displacement so native scroll anchoring is not applied twice.
-        const displacement = anchor.getBoundingClientRect().top - top
-        if (Math.abs(displacement) > 0.5) {
-          const destination = scroll.scrollTop + displacement
-          scroll.scrollTo({ top: destination, behavior: 'instant' })
-        }
-      }
     } catch (error) {
       if (!request.signal.aborted) {
         errorMessage.value = error instanceof Error ? error.message : '加载更多失败。'
@@ -579,7 +541,7 @@ export function useNavigation(
     loadMoreFailure,
     loadingPrevious,
     loadPreviousFailure,
-    readerEndSpace,
+    readerRevision,
     hasMore,
     canLoadNextPage,
     canLoadNextChapter,

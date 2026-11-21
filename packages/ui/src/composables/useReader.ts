@@ -1,6 +1,5 @@
-import { useInfiniteScroll, useResizeObserver, useScroll, useTimeoutFn } from '@vueuse/core'
-import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
-import type ReaderPages from '../components/ReaderPages.vue'
+import { useInfiniteScroll, useScroll, useTimeoutFn } from '@vueuse/core'
+import { computed, nextTick, onMounted, shallowRef, watch, type Ref } from 'vue'
 import { isPrimaryClick } from '../utils/is-primary-click'
 import { readerFrame } from '../utils/reader-frames'
 import type { useNavigation } from './useNavigation'
@@ -38,7 +37,6 @@ export function useReader({
     navigate,
     cancelReaderSeek,
     openReaderChapter,
-    showReaderFrame,
     returnToReaderStart,
     loadingMore,
     loadingPrevious,
@@ -61,7 +59,6 @@ export function useReader({
   let stoppingScroll = false
 
   const brokenImages = shallowRef(new Set<string>())
-  const readerPages = useTemplateRef<InstanceType<typeof ReaderPages>>('readerPages')
 
   const readerChrome = shallowRef(false)
   const chaptersOpen = shallowRef(false)
@@ -105,6 +102,7 @@ export function useReader({
   watch(readingQueue, () => {
     chaptersOpen.value = false
   })
+  watch(navigation.readerRevision, () => (brokenImages.value = new Set()))
   watch(
     () => page.value.kind,
     (kind) => {
@@ -196,10 +194,7 @@ export function useReader({
       void returnToReaderStart()
       return
     }
-    if (
-      !reducedMotion.value &&
-      (page.value.kind === 'catalog' || page.value.kind === 'library' || page.value.kind === 'gallery')
-    ) {
+    if (!reducedMotion.value) {
       returningToTop.value = true
       scheduleReturnToTopEnd()
     }
@@ -214,29 +209,6 @@ export function useReader({
     const next = new Set(brokenImages.value)
     next.delete(href)
     brokenImages.value = next
-  }
-
-  let readerObserver: IntersectionObserver | undefined
-  function observeReaderFrames(): void {
-    readerObserver?.disconnect()
-    const viewport = app.value
-    const surface = readerPages.value?.surface
-    if (!surface || !viewport) return
-    const height = viewport.clientHeight
-    const line = Math.floor(height / 3)
-    readerObserver = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0]
-        const frame = visible?.target
-        if (frame instanceof HTMLElement && frame.isConnected) {
-          showReaderFrame(Number(frame.dataset.readerChapter), Number(frame.dataset.readerIndex))
-        }
-      },
-      { root: viewport, rootMargin: `-${line}px 0px -${Math.max(0, height - line - 24)}px 0px` },
-    )
-    surface.querySelectorAll<HTMLElement>('[data-reader-index]').forEach((element) => readerObserver?.observe(element))
   }
 
   const readerPreloadDirection = computed(() => {
@@ -279,19 +251,9 @@ export function useReader({
       !loadMoreFailure.value,
   })
 
-  useResizeObserver(app, observeReaderFrames)
-
-  watch(readerFrames, async () => {
-    await nextTick()
-    observeReaderFrames()
-  })
   onMounted(async () => {
     await nextTick()
     if (document.activeElement === document.body) app.value?.focus({ preventScroll: true })
-    observeReaderFrames()
-  })
-  onBeforeUnmount(() => {
-    readerObserver?.disconnect()
   })
 
   return {
@@ -304,6 +266,7 @@ export function useReader({
     activeFramePosition,
     readerPagesAhead,
     readerPagesBehind,
+    scrollY,
     brokenImages,
     showBackToTop,
     returningToTop,
