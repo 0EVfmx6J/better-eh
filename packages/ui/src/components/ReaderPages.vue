@@ -25,7 +25,7 @@ defineExpose({ surface })
   <h1 class="sr-only">{{ title }}</h1>
   <div
     ref="surface"
-    class="reader-surface mx-auto block w-[min(100%,1000px)] overflow-visible bg-transparent [touch-action:pan-y_pinch-zoom]"
+    class="reader-surface mx-auto block w-[min(100%,1000px)] [touch-action:pan-y_pinch-zoom] overflow-visible bg-transparent"
     :class="{ 'fit-width': preferences.readerFit === 'width' }"
     :style="endSpace ? { paddingBottom: endSpace + 'px' } : undefined"
   >

@@ -1,6 +1,6 @@
-import { computed, reactive, shallowRef, watch, type Ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
 import { useSpring } from '@vueuse/motion'
+import { computed, reactive, shallowRef, watch, type Ref } from 'vue'
 
 const triggerDistance = 56
 const holdDistance = 52

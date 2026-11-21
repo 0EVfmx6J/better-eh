@@ -2,7 +2,7 @@
   @apply fixed;
   right: max(16px, calc(env(safe-area-inset-right) + 8px));
   bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
-  @apply z-12 w-[48px] h-[48px];
+  @apply z-12 h-[48px] w-[48px];
   border: 1px solid var(--line);
   @apply rounded-[50%] bg-surface text-ink;
   box-shadow: 0 4px 18px #0002;
@@ -26,12 +26,12 @@
   @apply pointer-events-none;
 }
 .loading-note {
-  @apply flex items-center gap-[8px] fixed;
+  @apply fixed flex items-center gap-[8px];
   right: max(16px, calc(env(safe-area-inset-right) + 8px));
   bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px));
   @apply z-12;
   padding: 8px 14px;
-  @apply rounded-[9px] bg-ink text-surface text-[12px];
+  @apply rounded-[9px] bg-ink text-[12px] text-surface;
 }
 .eh-app:has(+ .back-to-top) .loading-note {
   bottom: calc(max(16px, calc(env(safe-area-inset-bottom) + 8px)) + 56px);
@@ -50,7 +50,7 @@
   @apply max-w-none;
   max-height: 80dvh;
   margin: 0 auto;
-  @apply p-0 overflow-y-auto overscroll-contain;
+  @apply overflow-y-auto overscroll-contain p-0;
   border: 1px solid var(--line);
   border-bottom: 0;
   border-radius: 18px 18px 0 0;
@@ -73,7 +73,7 @@
   @apply overflow-hidden text-[14px] font-[650] text-ellipsis whitespace-nowrap;
 }
 .card-action-sheet-button {
-  @apply flex items-center gap-[12px] min-h-[50px] px-[14px] rounded-[10px] bg-panel font-semibold;
+  @apply flex min-h-[50px] items-center gap-[12px] rounded-[10px] bg-panel px-[14px] font-semibold;
   @apply touch-manipulation;
 }
 .card-action-sheet-button:active:not(:disabled) {
@@ -101,11 +101,11 @@
 .bookmark-flight {
   @apply fixed z-20;
   inset: 0 auto auto 0;
-  @apply grid w-[34px] h-[34px] place-items-center;
+  @apply grid h-[34px] w-[34px] place-items-center;
   border: 1px solid var(--line);
   @apply rounded-[9px] bg-ink text-surface;
   box-shadow: 0 4px 14px #0003;
-  @apply opacity-0 pointer-events-none;
+  @apply pointer-events-none opacity-0;
 }
 .bookmark-notice {
   @apply fixed z-13;
@@ -113,7 +113,7 @@
   bottom: max(14px, calc(env(safe-area-inset-bottom) + 6px));
   @apply flex;
   width: min(420px, calc(100% - 32px));
-  @apply min-h-[52px] items-center justify-between gap-[12px] mx-auto;
+  @apply mx-auto min-h-[52px] items-center justify-between gap-[12px];
   padding: 4px 12px;
   @apply rounded-[11px] bg-ink text-surface;
   box-shadow: 0 4px 18px #0003;
@@ -163,7 +163,7 @@
   transform: translateY(-3px);
 }
 .infinite-error {
-  @apply inline-flex items-center gap-[10px] text-muted text-[12px];
+  @apply inline-flex items-center gap-[10px] text-[12px] text-muted;
 }
 .native-frame-notice {
   @apply fixed z-20 m-0 max-w-[calc(100%-24px)] rounded-[9px] px-3 py-2 text-[13px];

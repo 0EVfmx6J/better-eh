@@ -15,7 +15,7 @@
   bottom: var(--reader-progress-bottom);
   @apply z-11 grid;
   width: min(460px, calc(100% - max(28px, env(safe-area-inset-left) + env(safe-area-inset-right))));
-  @apply gap-[8px] mx-auto;
+  @apply mx-auto gap-[8px];
 }
 .reader-progress-bar {
   @apply flex;
@@ -57,10 +57,10 @@
 .reader-chapter-list {
   @apply relative;
   max-height: min(300px, 40dvh);
-  @apply m-0 p-[4px] overflow-y-auto overscroll-y-contain list-none;
+  @apply m-0 list-none overflow-y-auto overscroll-y-contain p-[4px];
 }
 .reader-chapter-list button {
-  @apply flex w-full min-h-[44px] items-baseline gap-[10px];
+  @apply flex min-h-[44px] w-full items-baseline gap-[10px];
   padding: 9px 8px;
   @apply rounded-lg;
   text-align: start;
@@ -80,13 +80,13 @@
 }
 .reader-progress input {
   --reader-track: linear-gradient(to right, var(--ink) var(--reader-progress-value), var(--muted) 0);
-  @apply flex-1 min-w-0 h-[44px];
+  @apply h-[44px] min-w-0 flex-1;
   appearance: none;
   background: transparent;
   @apply cursor-pointer touch-none;
 }
 .reader-progress input:disabled {
-  @apply opacity-45 cursor-default;
+  @apply cursor-default opacity-45;
 }
 .reader-progress input::-webkit-slider-runnable-track {
   @apply h-[4px] rounded-sm;
@@ -97,18 +97,18 @@
   background: var(--reader-track);
 }
 .reader-progress input::-webkit-slider-thumb {
-  @apply w-[16px] h-[16px];
+  @apply h-[16px] w-[16px];
   margin-top: -6px;
   appearance: none;
   @apply rounded-[50%] bg-ink;
 }
 .reader-progress input::-moz-range-thumb {
-  @apply w-[16px] h-[16px];
+  @apply h-[16px] w-[16px];
   border: 0;
   @apply rounded-[50%] bg-ink;
 }
 .reading-actions {
-  @apply flex items-center flex-wrap gap-[8px];
+  @apply flex flex-wrap items-center gap-[8px];
 }
 .library-action {
   @apply min-h-[44px];
@@ -129,7 +129,7 @@
 .detail-actions .action-button {
   min-inline-size: min(112px, 100%);
   max-inline-size: 100%;
-  @apply whitespace-normal wrap-anywhere;
+  @apply wrap-anywhere whitespace-normal;
 }
 .detail-actions svg {
   @apply flex-none;

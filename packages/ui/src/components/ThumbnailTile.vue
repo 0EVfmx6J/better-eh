@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
 import { useElementSize } from '@vueuse/core'
+import { computed, useTemplateRef } from 'vue'
 import type { Thumbnail } from '@better-eh/core'
 
 const props = defineProps<{ thumb: Thumbnail }>()
@@ -33,6 +33,6 @@ const crop = computed(() => {
       loading="lazy"
       decoding="async"
     />
-    <span v-else class="grid h-full place-items-center muted">{{ thumb.index }}</span>
+    <span v-else class="muted grid h-full place-items-center">{{ thumb.index }}</span>
   </div>
 </template>

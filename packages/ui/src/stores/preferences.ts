@@ -1,6 +1,6 @@
-import { computed } from 'vue'
-import { defineStore } from 'pinia'
 import { useLocalStorage, useMediaQuery, usePreferredDark } from '@vueuse/core'
+import { defineStore } from 'pinia'
+import { computed } from 'vue'
 
 export const themeStorageKey = 'better-eh-theme'
 

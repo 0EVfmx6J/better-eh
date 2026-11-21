@@ -1,5 +1,5 @@
-import { shallowRef, triggerRef } from 'vue'
 import { defineStore } from 'pinia'
+import { shallowRef, triggerRef } from 'vue'
 import type { PageCache, PageEntry, SitePage } from '@better-eh/core'
 
 const pageLimit = 48

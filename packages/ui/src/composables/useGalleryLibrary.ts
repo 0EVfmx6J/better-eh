@@ -1,10 +1,10 @@
-import { computed, nextTick, onBeforeUnmount, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
+import { computed, nextTick, onBeforeUnmount, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import type { ReadingGallery, ReadingLibraryRemoval, SiteAdapter } from '@better-eh/core'
 import { useReadingLibraryStore } from '../stores/reading-library'
-import { librarySections, type LibrarySection } from '../utils/reading-library-route'
 import { readerFrame } from '../utils/reader-frames'
+import { librarySections, type LibrarySection } from '../utils/reading-library-route'
 import type { useNavigation } from './useNavigation'
 
 interface GalleryLibraryOptions {

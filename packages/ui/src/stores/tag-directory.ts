@@ -1,5 +1,5 @@
-import { computed, shallowRef } from 'vue'
 import { defineStore } from 'pinia'
+import { computed, shallowRef } from 'vue'
 import type { SiteAdapter, TagDirectory } from '@better-eh/core'
 
 export const useTagDirectoryStore = defineStore('tag-directory', () => {

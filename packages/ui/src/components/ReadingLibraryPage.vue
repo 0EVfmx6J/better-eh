@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import type { ReadingGallery, ReadingLibraryRemoval } from '@better-eh/core'
 import { useReadingLibraryStore } from '../stores/reading-library'
+import { librarySections, type LibrarySection } from '../utils/reading-library-route'
 import ActionButton from './ActionButton.vue'
 import GalleryCardAction from './GalleryCardAction.vue'
 import GalleryList from './GalleryList.vue'
 import GalleryMoreButton from './GalleryMoreButton.vue'
-import { librarySections, type LibrarySection } from '../utils/reading-library-route'
 
 const props = defineProps<{
   section: LibrarySection

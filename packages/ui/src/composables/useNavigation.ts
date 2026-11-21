@@ -1,5 +1,5 @@
-import { computed, nextTick, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
+import { computed, nextTick, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue'
 import { createPageLoader, nativePageFlag } from '@better-eh/core'
 import type {
   CatalogPage,
@@ -13,9 +13,9 @@ import type {
 import { useCatalogHistoryStore } from '../stores/catalog-history'
 import { usePageCacheStore } from '../stores/page-cache'
 import { appendUnique } from '../utils/append-unique'
-import { libraryPage, type LibraryPage } from '../utils/reading-library-route'
 import { firstReaderIndex, queuedReaderPage, readerFrame, readerHasNext } from '../utils/reader-frames'
 import { createReaderPageResolver } from '../utils/reader-pages'
+import { libraryPage, type LibraryPage } from '../utils/reading-library-route'
 
 type NavigationMode =
   | 'push'

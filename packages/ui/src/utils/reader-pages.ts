@@ -1,6 +1,6 @@
 import type { createPageLoader, GalleryPage, ReaderPage, ReadingGallery, SiteAdapter, SitePage } from '@better-eh/core'
-import type { LibraryPage } from './reading-library-route'
 import { firstReaderIndex } from './reader-frames'
+import type { LibraryPage } from './reading-library-route'
 
 export function createReaderPageResolver(
   adapter: SiteAdapter,

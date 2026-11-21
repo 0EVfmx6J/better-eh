@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import { Search, X } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
+import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { CompleteTags, TagCompletion } from '@better-eh/core'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 

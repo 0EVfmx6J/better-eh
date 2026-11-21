@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "oxfmt": "catalog:",
-    "oxlint": "catalog:"
+    "oxlint": "catalog:",
+    "oxlint-tailwindcss": "catalog:"
   }
 }

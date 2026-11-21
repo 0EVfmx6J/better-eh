@@ -3,7 +3,7 @@ defineProps<{ size: number }>()
 </script>
 
 <template>
-  <div class="relative text-[0] align-middle" aria-live="polite" aria-busy="true">
+  <div class="relative align-middle text-[0]" aria-live="polite" aria-busy="true">
     <svg
       class="relative inline-block max-h-full max-w-full align-middle"
       :style="{ width: size + 'px', height: size + 'px' }"

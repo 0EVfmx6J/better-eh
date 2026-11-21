@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { ArrowRight } from '@lucide/vue'
+import { computed } from 'vue'
 import type { GalleryPage, GalleryTag, ReadingProgress } from '@better-eh/core'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import ActionButton from './ActionButton.vue'

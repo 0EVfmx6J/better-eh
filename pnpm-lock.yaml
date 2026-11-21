@@ -197,6 +197,9 @@ catalogs:
     oxlint:
       specifier: 1.94.0
       version: 1.94.0
+    oxlint-tailwindcss:
+      specifier: 1.17.2
+      version: 1.17.2
     pinia:
       specifier: 4.1.0
       version: 4.1.0
@@ -229,6 +232,9 @@ importers:
       oxlint:
         specifier: 'catalog:'
         version: 1.94.0
+      oxlint-tailwindcss:
+        specifier: 'catalog:'
+        version: 1.17.2
 
   apps/userscript:
     dependencies:
@@ -1412,6 +1418,10 @@ packages:
       vite-plus:
         optional: true
 
+  oxlint-tailwindcss@1.17.2:
+    resolution: {integrity: sha512-L19t/iFDQgEvwoje2H4eC1ClSe/Pr4V824eejb0FmQB14kixJ+0+Ed6diY2G/1qILHX6vXPHovf0XFvr1shTQQ==}
+    engines: {node: ^20.19.0 || >=22.12.0}
+
   oxlint@1.94.0:
     resolution: {integrity: sha512-Fnt+3wSKRhtLmvgRfxgRX0excSPCoyiXRol4eWKZLtXxWMQtwQ3KjKQUYXOw5loyinfnZfGzh4RCYf7opfL0vw==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -2529,6 +2539,11 @@ snapshots:
       '@oxfmt/binding-win32-arm64-msvc': 0.79.0
       '@oxfmt/binding-win32-ia32-msvc': 0.79.0
       '@oxfmt/binding-win32-x64-msvc': 0.79.0
+
+  oxlint-tailwindcss@1.17.2:
+    dependencies:
+      '@tailwindcss/node': 4.3.5
+      tailwindcss: 4.3.5
 
   oxlint@1.94.0:
     optionalDependencies:

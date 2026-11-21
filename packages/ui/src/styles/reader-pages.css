@@ -1,5 +1,5 @@
 .reader-frame {
-  @apply relative grid place-items-center min-h-[180px] mb-[18px] rounded-ui overflow-hidden bg-panel;
+  @apply relative mb-[18px] grid min-h-[180px] place-items-center overflow-hidden rounded-ui bg-panel;
   scroll-margin-top: 88px;
   @apply opacity-100;
   transform: translateY(0);
@@ -19,7 +19,7 @@
   --reader-image-max-height: max(360px, 69svh);
   @apply max-w-full;
   max-height: var(--reader-image-max-height);
-  @apply w-auto h-auto object-contain select-none;
+  @apply h-auto w-auto object-contain select-none;
 }
 .reader-frame img[width][height] {
   /* Reserve the page's rendered height before prepended images load. */
@@ -27,7 +27,7 @@
   aspect-ratio: auto var(--reader-image-ratio);
 }
 .reader-surface.fit-width .reader-frame img {
-  @apply w-full max-h-none;
+  @apply max-h-none w-full;
 }
 
 @media (max-width: 959px) {

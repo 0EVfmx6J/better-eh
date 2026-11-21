@@ -1,9 +1,9 @@
-import { createApp, shallowRef } from 'vue'
 import { createPinia, disposePinia } from 'pinia'
-import { BetterEhApp } from '@better-eh/ui'
+import { createApp, shallowRef } from 'vue'
 import type { SiteAdapter, SitePage } from '@better-eh/core'
-import styles from '@better-eh/ui/style.css?inline'
+import { BetterEhApp } from '@better-eh/ui'
 import { createBrowserReadingLibrary } from './browser-reading-library'
+import styles from '@better-eh/ui/style.css?inline'
 
 export function mount(
   host: HTMLElement,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, shallowRef, useId, watch } from 'vue'
 import { Plus, Search } from '@lucide/vue'
+import { computed, nextTick, ref, shallowRef, useId, watch } from 'vue'
 import type { TagChange, TagsPage } from '@better-eh/core'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import TagEditor from './TagEditor.vue'

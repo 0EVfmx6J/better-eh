@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, toRef, useTemplateRef } from 'vue'
 import { onClickOutside, useEventListener, useResizeObserver } from '@vueuse/core'
+import { onMounted, toRef, useTemplateRef } from 'vue'
 import ActionButton from './ActionButton.vue'
 
 const props = defineProps<{ anchor: HTMLElement; label: string; href: string }>()

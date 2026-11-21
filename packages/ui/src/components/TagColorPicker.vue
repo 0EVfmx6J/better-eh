@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, shallowRef, useId, useTemplateRef } from 'vue'
 import { Check, ChevronDown, Pipette, X } from '@lucide/vue'
+import { computed, shallowRef, useId, useTemplateRef } from 'vue'
 
 const swatches = [
   { name: '红色', value: '#cc3d46' },

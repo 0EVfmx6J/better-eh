@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
+import { ArrowDown, ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
 import { onClickOutside } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { ArrowDown, ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
+import { useTemplateRef } from 'vue'
 import type { CompleteTags } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
 import BookmarkButton from './BookmarkButton.vue'

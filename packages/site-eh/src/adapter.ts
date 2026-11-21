@@ -10,8 +10,8 @@ import type {
   Thumbnail,
 } from '@better-eh/core'
 import { catalogPaginationParams, ehNavigation, ehPageCacheGroup, isNativePage } from './navigation'
-import { parseTags } from './tags'
 import { exactTagTerm, loadTagDirectory } from './tag-directory'
+import { parseTags } from './tags'
 
 type SiteDocument = Document | DocumentFragment
 

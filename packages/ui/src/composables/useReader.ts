@@ -1,5 +1,5 @@
-import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { useInfiniteScroll, useResizeObserver, useScroll, useTimeoutFn } from '@vueuse/core'
+import { computed, nextTick, onBeforeUnmount, onMounted, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import type ReaderPages from '../components/ReaderPages.vue'
 import { isPrimaryClick } from '../utils/is-primary-click'
 import { readerFrame } from '../utils/reader-frames'

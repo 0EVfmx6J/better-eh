@@ -5,11 +5,11 @@
     Item extends ReadingGallery & { category?: string; posted?: string; recordedAt?: number; progressIndex?: number }
   "
 >
-import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
+import { Grid2X2, Image, List } from '@lucide/vue'
 import { usePreferredReducedMotion } from '@vueuse/core'
 import { MotionComponent } from '@vueuse/motion'
 import { storeToRefs } from 'pinia'
-import { Grid2X2, Image, List } from '@lucide/vue'
+import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { ReadingGallery } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
 import ActionButton from './ActionButton.vue'

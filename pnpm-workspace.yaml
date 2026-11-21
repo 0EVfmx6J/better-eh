@@ -19,5 +19,6 @@ catalog:
   vue-tsc: 3.3.14
   oxfmt: 0.79.0
   oxlint: 1.94.0
+  oxlint-tailwindcss: 1.17.2
 minimumReleaseAgeExclude:
   - '@lucide/vue@1.75.0'

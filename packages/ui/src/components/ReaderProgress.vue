@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { nextTick, useTemplateRef } from 'vue'
 import { ChevronDown, ChevronUp } from '@lucide/vue'
+import { nextTick, useTemplateRef } from 'vue'
 import type { ReadingGallery } from '@better-eh/core'
 
 const props = defineProps<{
@@ -89,7 +89,7 @@ async function selectReaderChapter(chapter: number): Promise<void> {
         @input="emit('preview', $event)"
         @pointercancel="emit('cancelPreview')"
       />
-      <output class="reader-count min-w-[58px] text-center whitespace-nowrap font-[650] tabular-nums"
+      <output class="reader-count min-w-[58px] text-center font-[650] whitespace-nowrap tabular-nums"
         >{{ currentPage }} / {{ totalPages || '—' }} 页</output
       >
       <button

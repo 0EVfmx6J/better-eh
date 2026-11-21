@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useTemplateRef } from 'vue'
 import { X } from '@lucide/vue'
+import { useTemplateRef } from 'vue'
 import type { SiteNavigationItem } from '@better-eh/core'
 import SiteNavLinks from './SiteNavLinks.vue'
 

@@ -1,5 +1,5 @@
-import { shallowRef, triggerRef } from 'vue'
 import { defineStore } from 'pinia'
+import { shallowRef, triggerRef } from 'vue'
 import type { CatalogPage } from '@better-eh/core'
 
 interface CatalogSnapshot {

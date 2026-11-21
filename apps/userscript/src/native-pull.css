@@ -32,7 +32,6 @@ button {
   width: 2px;
   height: calc(51px + env(safe-area-inset-top));
   background: var(--ink);
-  box-shadow: 0 0 0 1px var(--surface);
   transform-origin: center top;
   pointer-events: none;
 }
@@ -46,7 +45,6 @@ button {
   height: 34px;
   box-sizing: border-box;
   place-items: center;
-  border: 1px solid var(--surface);
   border-radius: 50%;
   color: var(--surface);
   background: var(--ink);
