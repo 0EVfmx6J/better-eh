@@ -77,6 +77,8 @@ export interface GalleryPage extends GallerySummary, PageLinks {
 export interface ReaderFrame {
   href: string
   image: string
+  reloadHref?: string
+  originalHref?: string
   width?: number
   height?: number
   index: number

@@ -142,6 +142,8 @@ const {
   readerPagesBehind,
   scrollY,
   brokenImages,
+  imageRetryErrors,
+  retryingImages,
   showBackToTop,
   returningToTop,
   backToTopTitle,
@@ -149,13 +151,16 @@ const {
   tapReader,
   backToTop,
   markBroken,
+  rememberImage,
   retryImage,
+  loadOriginalImage,
   clearReaderPreview,
   previewReaderPage,
   selectReaderChapter,
 } = useReader({
   app,
   navigation,
+  viewActive: props.viewActive,
   desktopNavigation,
   compactSearch,
   searchOpen,
@@ -443,6 +448,8 @@ function goBack(event: MouseEvent) {
         :title="reader?.title"
         :frames="readerFrames"
         :viewport="app"
+        :active="viewActive?.value !== false"
+        :load-thumbnails="navigation.loadReaderThumbnails"
         :scroll-top="scrollY"
         :track-position="!pending"
         :returning-to-top="returningToTop"
@@ -450,11 +457,15 @@ function goBack(event: MouseEvent) {
         :pages-behind="readerPagesBehind"
         :busy="busy"
         :broken-images="brokenImages"
+        :image-retry-errors="imageRetryErrors"
+        :retrying-images="retryingImages"
         :load-previous-failure="loadPreviousFailure"
         :native-link="nativeLink"
         @retry-previous="retryLoadMore('previous')"
         @image-error="markBroken"
+        @image-load="rememberImage"
         @retry-image="retryImage"
+        @load-original-image="loadOriginalImage"
         @show-page="navigation.showReaderFrame"
       />
 

@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { shallowRef, triggerRef } from 'vue'
-import type { PageCache, PageEntry, SitePage } from '@better-eh/core'
+import { shallowReactive, shallowRef, triggerRef } from 'vue'
+import type { PageCache, PageEntry, ReaderFrame, SitePage } from '@better-eh/core'
 
 const pageLimit = 48
 const groupLimit = 12
+const readerImageLimit = pageLimit * groupLimit
 type CachedPages = Map<string, PageEntry>
 type CacheGroups = Map<string, CachedPages>
 
@@ -18,8 +19,14 @@ function trim<K, V>(map: Map<K, V>, limit: number): void {
   if (!oldest.done) map.delete(oldest.value)
 }
 
+function readerImageKey(href: string): string {
+  const url = new URL(href)
+  return url.origin + url.pathname.replace(/\/$/, '')
+}
+
 export const usePageCacheStore = defineStore('page-cache', () => {
   const groupsByKind = shallowRef(new Map<SitePage['kind'], CacheGroups>())
+  const readerImages = shallowReactive(new Map<string, ReaderFrame>())
 
   const get: PageCache['get'] = ({ kind, key }, href) => {
     const groups = groupsByKind.value.get(kind)
@@ -58,5 +65,19 @@ export const usePageCacheStore = defineStore('page-cache', () => {
     triggerRef(groupsByKind)
   }
 
-  return { groupsByKind, get, set, update }
+  function getReaderImage(href: string): ReaderFrame | undefined {
+    return readerImages.get(readerImageKey(href))
+  }
+
+  function setReaderImage(frame: ReaderFrame): void {
+    touch(readerImages, readerImageKey(frame.href), frame)
+    trim(readerImages, readerImageLimit)
+  }
+
+  function forgetReaderImage(href: string, image: string): boolean {
+    const key = readerImageKey(href)
+    return readerImages.get(key)?.image === image && readerImages.delete(key)
+  }
+
+  return { groupsByKind, get, set, update, readerImages, getReaderImage, setReaderImage, forgetReaderImage }
 })

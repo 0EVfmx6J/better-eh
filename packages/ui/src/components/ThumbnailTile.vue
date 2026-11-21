@@ -3,7 +3,7 @@ import { useElementSize } from '@vueuse/core'
 import { computed, useTemplateRef } from 'vue'
 import type { Thumbnail } from '@better-eh/core'
 
-const props = defineProps<{ thumb: Thumbnail }>()
+const props = defineProps<{ thumb: Thumbnail; fill?: boolean }>()
 const tile = useTemplateRef('tile')
 const { width, height } = useElementSize(tile)
 const crop = computed(() => {
@@ -23,14 +23,18 @@ const crop = computed(() => {
 </script>
 
 <template>
-  <div ref="tile" class="thumbnail-image relative aspect-[4/5] overflow-hidden bg-panel">
+  <div
+    ref="tile"
+    class="thumbnail-image relative overflow-hidden bg-panel"
+    :class="fill ? 'size-full' : 'aspect-[4/5]'"
+  >
     <span v-if="crop" class="thumbnail-sprite absolute origin-top-left bg-no-repeat" :style="crop" />
     <img
       class="size-full object-contain"
       v-else-if="thumb.image"
       :src="thumb.image"
       alt=""
-      loading="lazy"
+      :loading="fill ? 'eager' : 'lazy'"
       decoding="async"
     />
     <span v-else class="muted grid h-full place-items-center">{{ thumb.index }}</span>

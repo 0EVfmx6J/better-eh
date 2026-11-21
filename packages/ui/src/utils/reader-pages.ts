@@ -40,22 +40,24 @@ export function createReaderPageResolver(
   ): Promise<string> {
     const direct = adapter.readerPageUrl?.(gallery, index)
     if (direct) return direct
-    const missing = `找不到第 ${index} 页。`
+    const thumbnails = await galleryThumbnails(gallery, index, signal, firstPage)
+    const target = thumbnails.find((thumbnail) => thumbnail.index === index)
+    if (!target) throw new Error(`找不到第 ${index} 页。`)
+    return target.href
+  }
+
+  async function galleryThumbnails(gallery: URL, index: number, signal: AbortSignal, firstPage?: GalleryPage) {
     const batchUrl = adapter.galleryThumbnailPageUrl
     const page = firstPage ?? (await loader.load(batchUrl?.(gallery, 0) ?? gallery.href, signal)).page
-    if (page.kind !== 'gallery') throw new Error(missing)
+    if (page.kind !== 'gallery') return []
     const thumbnails = page.thumbnails
-    const target = thumbnails.find((thumbnail) => thumbnail.index === index)
-    if (target) return target.href
+    if (thumbnails.some((thumbnail) => thumbnail.index === index)) return thumbnails
 
     // The first thumbnail page reflects the site's current thumbnail page size setting.
     const pageSize = thumbnails.at(-1)?.index ?? 0
-    if (!batchUrl || !pageSize || thumbnails[0]?.index !== 1 || index <= pageSize) throw new Error(missing)
+    if (!batchUrl || !pageSize || thumbnails[0]?.index !== 1 || index <= pageSize) return []
     const batch = await loader.load(batchUrl(gallery, Math.floor((index - 1) / pageSize)), signal)
-    const thumbnail =
-      batch.page.kind === 'gallery' ? batch.page.thumbnails.find((item) => item.index === index) : undefined
-    if (!thumbnail) throw new Error(missing)
-    return thumbnail.href
+    return batch.page.kind === 'gallery' ? batch.page.thumbnails : []
   }
 
   async function lastReaderPage(gallery: ReadingGallery, signal: AbortSignal) {
@@ -77,5 +79,5 @@ export function createReaderPageResolver(
     return { url: last.url, page: last.page }
   }
 
-  return { firstReaderPage, readerTargetUrl, lastReaderPage }
+  return { firstReaderPage, readerTargetUrl, lastReaderPage, galleryThumbnails }
 }

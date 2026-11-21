@@ -4,6 +4,7 @@ import { isPrimaryClick } from '../utils/is-primary-click'
 import { readerFrame } from '../utils/reader-frames'
 import { stopScrollMomentum } from '../utils/stop-scroll-momentum'
 import type { useNavigation } from './useNavigation'
+import { useReaderImages } from './useReaderImages'
 
 interface ReaderOptions {
   app: Readonly<Ref<HTMLElement | null>>
@@ -12,6 +13,7 @@ interface ReaderOptions {
   compactSearch: Readonly<Ref<boolean>>
   searchOpen: Ref<boolean>
   reducedMotion: Readonly<Ref<boolean>>
+  viewActive?: Readonly<Ref<boolean>>
   focusNavigation: () => void
 }
 
@@ -22,6 +24,7 @@ export function useReader({
   compactSearch,
   searchOpen,
   reducedMotion,
+  viewActive,
   focusNavigation,
 }: ReaderOptions) {
   const {
@@ -59,8 +62,6 @@ export function useReader({
   })
   let stoppingScroll = false
 
-  const brokenImages = shallowRef(new Set<string>())
-
   const readerChrome = shallowRef(false)
   const chaptersOpen = shallowRef(false)
   const chromeVisible = computed(() => !reader.value || readerChrome.value)
@@ -69,11 +70,21 @@ export function useReader({
   const { start: scheduleReaderSeek, stop: stopReaderSeek } = useTimeoutFn(commitReaderSeek, 350, { immediate: false })
   const readerPagesAhead = 5
   const readerPagesBehind = 3
-  const readerFrames = computed(() =>
+  const frames = computed(() =>
     readerSections.value.flatMap(({ chapter, url, page }) =>
       (page.frames ?? [readerFrame(page, url)]).map((frame) => ({ ...frame, chapter })),
     ),
   )
+  const {
+    readerFrames,
+    brokenImages,
+    imageRetryErrors,
+    retryingImages,
+    markBroken,
+    rememberImage,
+    retryImage,
+    loadOriginalImage,
+  } = useReaderImages(frames, navigation.readerRevision, navigation.loadReaderImage, viewActive)
   const activeFramePosition = computed(() =>
     readerFrames.value.findIndex((frame) => frame.chapter === readerChapter.value && frame.index === readerIndex.value),
   )
@@ -103,12 +114,10 @@ export function useReader({
   watch(readingQueue, () => {
     chaptersOpen.value = false
   })
-  watch(navigation.readerRevision, () => (brokenImages.value = new Set()))
   watch(
     () => page.value.kind,
     (kind) => {
       if (kind !== 'reader') {
-        brokenImages.value = new Set()
         readerChrome.value = false
         clearReaderPreview()
       }
@@ -199,16 +208,6 @@ export function useReader({
     viewport.scrollTo({ top: 0, behavior: reducedMotion.value ? 'instant' : 'smooth' })
   }
 
-  function markBroken(href: string): void {
-    brokenImages.value = new Set(brokenImages.value).add(href)
-  }
-
-  function retryImage(href: string): void {
-    const next = new Set(brokenImages.value)
-    next.delete(href)
-    brokenImages.value = next
-  }
-
   const readerPreloadDirection = computed(() => {
     const position = activeFramePosition.value
     if (position < 0 || readerPreview.value || pending.value || loadingMore.value || loadingPrevious.value)
@@ -266,6 +265,8 @@ export function useReader({
     readerPagesBehind,
     scrollY,
     brokenImages,
+    imageRetryErrors,
+    retryingImages,
     showBackToTop,
     returningToTop,
     backToTopTitle,
@@ -273,7 +274,9 @@ export function useReader({
     tapReader,
     backToTop,
     markBroken,
+    rememberImage,
     retryImage,
+    loadOriginalImage,
     clearReaderPreview,
     previewReaderPage,
     selectReaderChapter,

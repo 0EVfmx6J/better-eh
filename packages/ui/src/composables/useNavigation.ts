@@ -4,6 +4,7 @@ import { createPageLoader, nativePageFlag } from '@better-eh/core'
 import type {
   CatalogPage,
   GalleryPage,
+  ReaderFrame,
   ReaderPage,
   ReadingGallery,
   SiteAdapter,
@@ -113,7 +114,7 @@ export function useNavigation(
     initialPage,
     usePageCacheStore(),
   )
-  const { firstReaderPage, readerTargetUrl, lastReaderPage } = createReaderPageResolver(
+  const { firstReaderPage, readerTargetUrl, lastReaderPage, galleryThumbnails } = createReaderPageResolver(
     adapter,
     loader,
     readerGalleryUrl,
@@ -479,6 +480,24 @@ export function useNavigation(
     await loadMore(direction)
   }
 
+  async function loadReaderImage(frame: ReaderFrame, signal: AbortSignal): Promise<ReaderFrame> {
+    const entry = await loader.load(frame.reloadHref ?? frame.href, signal, true)
+    if (
+      entry.page.kind !== 'reader' ||
+      entry.page.index !== frame.index ||
+      adapter.pageCacheGroup(new URL(entry.url)).key !== adapter.pageCacheGroup(new URL(frame.href)).key
+    ) {
+      throw new Error('原站没有返回这一页的图片。')
+    }
+    return entry.page.frames?.find((item) => item.index === frame.index) ?? readerFrame(entry.page, entry.url)
+  }
+
+  async function loadReaderThumbnails(chapter: number, index: number, signal: AbortSignal) {
+    const section = readerSections.value.find((section) => section.chapter === chapter)
+    const href = section && readerGalleryUrl(section.page)
+    return href ? galleryThumbnails(new URL(href), index, signal) : []
+  }
+
   async function commitTagChange(change: TagChange): Promise<void> {
     const current = page.value
     if (current.kind !== 'tags') return
@@ -541,6 +560,8 @@ export function useNavigation(
     cancelReaderSeek,
     returnToReaderStart,
     loadMore,
+    loadReaderImage,
+    loadReaderThumbnails,
     loadGalleryComments: loader.loadComments,
     refreshGalleryComments: loader.refreshGalleryComments,
     retryLoadMore,

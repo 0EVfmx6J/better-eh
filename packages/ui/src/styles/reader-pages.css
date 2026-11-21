@@ -13,17 +13,20 @@
   @apply pointer-events-none invisible absolute size-0;
   max-height: var(--reader-image-max-height);
 }
-.reader-frame img {
+.reader-frame-preview.thumbnail-image {
+  @apply absolute inset-0;
+}
+.reader-page-image {
   @apply max-w-full;
   max-height: var(--reader-image-max-height);
   @apply h-auto w-auto object-contain select-none;
 }
-.reader-frame img[width][height] {
+.reader-page-image[width][height] {
   /* Reserve the page's rendered height before prepended images load. */
   width: min(100%, var(--reader-image-width), calc(var(--reader-image-max-height) * var(--reader-image-ratio)));
   aspect-ratio: auto var(--reader-image-ratio);
 }
-.reader-surface.fit-width .reader-frame img {
+.reader-surface.fit-width .reader-page-image {
   @apply max-h-none w-full;
 }
 

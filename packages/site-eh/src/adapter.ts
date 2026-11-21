@@ -163,6 +163,37 @@ function parseGallery(doc: SiteDocument, base: URL): GalleryPage | undefined {
   }
 }
 
+function readerReloadHref(doc: SiteDocument, base: URL): string | undefined {
+  const control = doc.querySelector('#loadfail')
+  const handler = control?.getAttribute('onclick') ?? ''
+  const key = /^\s*(?:return\s+)?nl\(\s*(['"])([\w-]+)\1\s*\)\s*;?\s*$/.exec(handler)?.[2]
+  if (!key || key === base.searchParams.get('nl')) return undefined
+  const url = new URL(base)
+  url.searchParams.set('nl', key)
+  url.hash = ''
+  return url.href
+}
+
+function readerOriginalHref(doc: SiteDocument, base: URL): string | undefined {
+  const readerPath = /\/(\d+)-(\d+)\/?$/.exec(base.pathname)
+  if (!readerPath) return undefined
+
+  const [, galleryId, index] = readerPath
+  for (const anchor of doc.querySelectorAll('#i6 a[href]')) {
+    const href = link(anchor, base)
+    if (!href) continue
+    const url = new URL(href)
+    const originalPath = /^\/fullimg\/(\d+)\/(\d+)(?:\/|$)/.exec(url.pathname)
+    if (originalPath?.[1] === galleryId && originalPath?.[2] === index) return href
+    if (
+      url.pathname === '/fullimg.php' &&
+      url.searchParams.get('gid') === galleryId &&
+      url.searchParams.get('page') === index
+    )
+      return href
+  }
+}
+
 function parseReader(doc: SiteDocument, base: URL): ReaderPage | undefined {
   const element = doc.querySelector<HTMLImageElement>('img#img')
   if (!element) return undefined
@@ -172,6 +203,8 @@ function parseReader(doc: SiteDocument, base: URL): ReaderPage | undefined {
   const frame: ReaderFrame = {
     href: base.href,
     image: src,
+    reloadHref: readerReloadHref(doc, base),
+    originalHref: readerOriginalHref(doc, base),
     width: numeric(element.style.width || element.getAttribute('width') || ''),
     height: numeric(element.style.height || element.getAttribute('height') || ''),
     index: numeric(base.pathname.split('-').at(-1) ?? '') || counters[0] || 1,
