@@ -20,6 +20,7 @@ const props = defineProps<{
   active: boolean
   loadComments: (href: string, signal: AbortSignal, refresh: boolean) => Promise<Comments>
   refreshComments: (href: string, signal: AbortSignal) => Promise<Comments>
+  loadCommentTotal?: (href: string, signal: AbortSignal) => Promise<number | undefined>
 }>()
 const tags = useTagDirectoryStore()
 const thumbnailsHeading = useId()
@@ -150,6 +151,7 @@ const galleryTagGroups = computed(() => {
       :active="active"
       :load-comments="loadComments"
       :refresh-comments="refreshComments"
+      :load-comment-total="loadCommentTotal"
       @navigate="(event, href) => emit('openCommentLink', event, href)"
     />
   </div>

@@ -163,7 +163,7 @@ export interface SiteAdapter {
   canonicalGalleryUrl?: (url: URL) => string
   readerPageUrl?: (gallery: URL, index: number) => string | undefined
   galleryThumbnailPageUrl?: (gallery: URL, batch: number) => string
-  galleryCommentsUrl?: (gallery: URL) => string | undefined
+  galleryCommentsUrl?: (gallery: URL, perPage?: number) => string | undefined
   navigation?: (url: URL) => SiteNavigationItem[]
   search: (url: URL, query: string) => string
   loadTagDirectory?: () => Promise<TagDirectory>

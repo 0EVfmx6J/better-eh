@@ -122,6 +122,11 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
     return url ? loadComments(url, signal, true) : readGalleryComments(href, signal, true)
   }
 
+  async function loadGalleryCommentTotal(href: string, signal: AbortSignal): Promise<number | undefined> {
+    const url = adapter.galleryCommentsUrl?.(pageUrl(href), 1)
+    if (url) return (await loadComments(url, signal, false)).total
+  }
+
   function submitTagChange(href: string, page: TagsPage, change: TagChange): Promise<TagsPage> {
     return enqueue(async () => {
       const updated = await page.submit(change)
@@ -138,5 +143,5 @@ export function createPageLoader(adapter: SiteAdapter, initialUrl: string, initi
     })
   }
 
-  return { load, loadComments, refreshGalleryComments, submitTagChange }
+  return { load, loadComments, refreshGalleryComments, loadGalleryCommentTotal, submitTagChange }
 }

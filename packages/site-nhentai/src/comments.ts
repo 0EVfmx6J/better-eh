@@ -6,16 +6,16 @@ const pageSize = 30
 const maxPage = 2000
 const commentSelector = '.comment[id^="comment-"]'
 
-function commentsUrl(base: URL, galleryId: string, page: number): string {
+function commentsUrl(base: URL, galleryId: string, page: number, perPage = pageSize): string {
   const target = new URL(`/api/v2/galleries/${galleryId}/comments`, base)
   target.searchParams.set('page', String(page))
-  target.searchParams.set('per_page', String(pageSize))
+  target.searchParams.set('per_page', String(perPage))
   return target.href
 }
 
-export function galleryCommentsUrl(gallery: URL): string | undefined {
+export function galleryCommentsUrl(gallery: URL, perPage?: number): string | undefined {
   const id = galleryPath.exec(gallery.pathname)?.[1]
-  if (id) return commentsUrl(gallery, id, 1)
+  if (id) return commentsUrl(gallery, id, 1, perPage)
 }
 
 export function parseComments(doc: SiteDocument, base: URL, galleryId: string): GalleryComments {
@@ -43,7 +43,7 @@ export function parseComments(doc: SiteDocument, base: URL, galleryId: string): 
   const page = positiveInteger(lastPage?.getAttribute('data-page')) || 1
   const count = lastPage?.querySelectorAll(commentSelector).length ?? elements.length
   const moreHref = count >= pageSize && page < maxPage ? commentsUrl(base, galleryId, page + 1) : undefined
-  return { items, moreHref }
+  return { items, moreHref, total: count < pageSize ? elements.length : undefined }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -53,6 +53,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function parseCommentsResponse(body: string, url: URL): GalleryComments {
   const galleryId = /^\/api\/v2\/galleries\/([1-9]\d*)\/comments\/?$/.exec(url.pathname)?.[1]
   const page = positiveInteger(url.searchParams.get('page'))
+  const perPage = positiveInteger(url.searchParams.get('per_page')) || pageSize
   const payload: unknown = JSON.parse(body)
   if (
     !galleryId ||
@@ -95,6 +96,8 @@ export function parseCommentsResponse(body: string, url: URL): GalleryComments {
         ? payload.total
         : undefined,
     moreHref:
-      rows.length && page < Math.min(payload.num_pages, maxPage) ? commentsUrl(url, galleryId, page + 1) : undefined,
+      rows.length && page < Math.min(payload.num_pages, maxPage)
+        ? commentsUrl(url, galleryId, page + 1, perPage)
+        : undefined,
   }
 }

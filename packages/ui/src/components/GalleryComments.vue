@@ -16,6 +16,7 @@ const props = defineProps<{
   active: boolean
   loadComments: (href: string, signal: AbortSignal, refresh: boolean) => Promise<GalleryComments>
   refreshComments: (href: string, signal: AbortSignal) => Promise<GalleryComments>
+  loadCommentTotal?: (href: string, signal: AbortSignal) => Promise<number | undefined>
 }>()
 const emit = defineEmits<{ navigate: [event: MouseEvent, href: string] }>()
 
@@ -26,6 +27,8 @@ const trigger = useTemplateRef<HTMLElement>('trigger')
 const open = shallowRef(false)
 const loaded = shallowRef<GalleryComments>()
 const comments = computed(() => loaded.value ?? props.comments)
+const fetchedTotal = shallowRef<number>()
+const total = computed(() => comments.value?.total ?? fetchedTotal.value)
 const loading = shallowRef(false)
 const failed = shallowRef(false)
 const refreshing = shallowRef(false)
@@ -38,6 +41,27 @@ const { y: scrollY, isScrolling, measure } = useScroll(viewport)
 const closeButton = useTemplateRef<HTMLButtonElement>('closeButton')
 let stoppingScroll = false
 let request: AbortController | undefined
+const scrollPositions = new Map<string, number>()
+
+watch(
+  [() => props.active, () => props.galleryHref, total],
+  async ([active, href, count], _, onCleanup) => {
+    if (!active || count !== undefined || !props.loadCommentTotal) return
+    const controller = new AbortController()
+    onCleanup(() => controller.abort())
+    try {
+      const result = await props.loadCommentTotal(href, controller.signal)
+      if (!controller.signal.aborted) fetchedTotal.value = result
+    } catch {
+      // Keep the count hidden until a comment request returns it.
+    }
+  },
+  { immediate: true },
+)
+
+function saveScrollPosition(): void {
+  if (viewport.value) scrollPositions.set(props.galleryHref, viewport.value.scrollTop)
+}
 
 function cancelRequest(): void {
   request?.abort()
@@ -49,6 +73,7 @@ function cancelRequest(): void {
 }
 
 function close(): void {
+  saveScrollPosition()
   open.value = false
   cancelRequest()
 }
@@ -140,6 +165,10 @@ watch(
     if (!element) return
     element.showModal()
     measure()
+    const top = scrollPositions.get(props.galleryHref)
+    if (top !== undefined) {
+      requestAnimationFrame(() => viewport.value?.scrollTo({ top, behavior: 'instant' }))
+    }
   },
   { flush: 'post' },
 )
@@ -148,6 +177,7 @@ watch(
   () => {
     cancelRequest()
     loaded.value = undefined
+    fetchedTotal.value = undefined
   },
 )
 watch(
@@ -179,7 +209,7 @@ function restoreFocus(): void {
     @click="open = true"
   >
     <MessageSquare :size="15" aria-hidden="true" />
-    评论<span v-if="comments?.total !== undefined" class="tabular-nums">{{ comments.total }}</span>
+    评论<span v-if="total !== undefined" class="tabular-nums">{{ total }}</span>
   </button>
 
   <Transition name="gallery-comments-drawer" @after-leave="restoreFocus">
@@ -199,8 +229,8 @@ function restoreFocus(): void {
         >
           <h2 :id="titleId" class="flex items-baseline gap-2 text-[18px] font-bold">
             评论
-            <span v-if="comments?.total !== undefined" class="text-[13px] font-normal text-muted tabular-nums">
-              {{ comments.total }}
+            <span v-if="total !== undefined" class="text-[13px] font-normal text-muted tabular-nums">
+              {{ total }}
             </span>
           </h2>
           <div class="flex items-center gap-1">

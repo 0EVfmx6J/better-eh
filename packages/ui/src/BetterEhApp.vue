@@ -413,6 +413,7 @@ function goBack(event: MouseEvent) {
         :active="viewActive?.value !== false"
         :load-comments="navigation.loadGalleryComments"
         :refresh-comments="navigation.refreshGalleryComments"
+        :load-comment-total="navigation.loadGalleryCommentTotal"
         @navigate="activate"
         @open-comment-link="openCommentLink"
         @start-reading="startGalleryReading"

@@ -564,6 +564,7 @@ export function useNavigation(
     loadReaderThumbnails,
     loadGalleryComments: loader.loadComments,
     refreshGalleryComments: loader.refreshGalleryComments,
+    loadGalleryCommentTotal: adapter.galleryCommentsUrl ? loader.loadGalleryCommentTotal : undefined,
     retryLoadMore,
     commitTagChange,
   }
