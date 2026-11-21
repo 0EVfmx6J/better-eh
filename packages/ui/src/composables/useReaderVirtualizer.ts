@@ -2,6 +2,7 @@ import { elementScroll, useVirtualizer, type Range } from '@tanstack/vue-virtual
 import { useDebounceFn, useEventListener, useResizeObserver } from '@vueuse/core'
 import { computed, nextTick, onScopeDispose, shallowReactive, shallowRef, watch, type Ref } from 'vue'
 import type { ReaderFrame } from '@better-eh/core'
+import { afterRenderedFrame } from '../utils/after-rendered-frame'
 
 export interface ReaderVirtualizerProps {
   viewport: HTMLElement | null
@@ -261,7 +262,7 @@ export function useReaderVirtualizer(
     request: ReaderLayoutAnchor,
   ): Promise<void> {
     // Wait for the new sizes and their offsets to be committed before using the target's position.
-    await new Promise<number>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await afterRenderedFrame()
     if (restoringPage.value !== request) return
     const index = props.frames.findIndex((frame) => frame.href === request.href)
     const target = container.querySelector<HTMLElement>(`[data-index="${index}"]`)

@@ -1,5 +1,5 @@
-import { commentBody, linkifyComment, type GalleryComments } from '@better-eh/core'
-import { positiveInteger, text, type SiteDocument } from './dom'
+import { commentBody, linkifyComment, readText as text, type GalleryComments, type SiteDocument } from '@better-eh/core'
+import { positiveInteger } from './dom'
 import { galleryPath } from './urls'
 
 const pageSize = 30

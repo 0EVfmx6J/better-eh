@@ -1,16 +1,11 @@
+import { resolveHttpUrl } from './site-dom'
 import type { GalleryCommentPart } from './types'
 
 function localHref(value: string, base: URL): string | undefined {
-  if (!value.trim()) return undefined
-  try {
-    const url = new URL(value, base)
-    if (url.host !== base.host || url.username || url.password) return undefined
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined
-    url.protocol = base.protocol
-    return url.href
-  } catch {
-    return undefined
-  }
+  const url = resolveHttpUrl(value, base)
+  if (!url || url.host !== base.host) return undefined
+  url.protocol = base.protocol
+  return url.href
 }
 
 export function linkifyComment(text: string, base: URL): GalleryCommentPart[] {

@@ -1,6 +1,4 @@
-import type { ManagedTag, TagChange, TagsPage } from '@better-eh/core'
-
-type TagsDocument = Document | DocumentFragment
+import type { ManagedTag, SiteDocument, TagChange, TagsPage } from '@better-eh/core'
 
 interface TagSource {
   url: URL
@@ -14,7 +12,7 @@ function tagsUrl(base: URL, group: string): URL {
   return url
 }
 
-function readApi(doc: TagsDocument, url: URL): TagSource['api'] {
+function readApi(doc: SiteDocument, url: URL): TagSource['api'] {
   if (url.hostname !== 'e-hentai.org' && url.hostname !== 'exhentai.org') return undefined
   const host = url.hostname === 'exhentai.org' ? 's.exhentai.org' : 'api.e-hentai.org'
   for (const script of doc.querySelectorAll('script:not([src])')) {
@@ -139,7 +137,7 @@ async function submitTagForm(
   return updated
 }
 
-export function parseTags(doc: TagsDocument, url: URL): TagsPage | undefined {
+export function parseTags(doc: SiteDocument, url: URL): TagsPage | undefined {
   if (url.pathname.replace(/\/$/, '') !== '/mytags') return undefined
   const form = doc.querySelector('#usertag_form')
   const tagList = doc.querySelector('#usertags_outer')

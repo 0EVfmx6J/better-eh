@@ -1,9 +1,17 @@
-import type { GalleryPage, GalleryTag, Thumbnail } from '@better-eh/core'
+import {
+  readImageUrl as imageUrl,
+  readLocalLink as localLink,
+  readText as text,
+  type GalleryPage,
+  type GalleryTag,
+  type SiteDocument,
+  type Thumbnail,
+} from '@better-eh/core'
 import { parseComments } from './comments'
-import { imageUrl, localLink, positiveInteger, text, type SiteDocument } from './dom'
-import { galleryUrl, readerPath, readerUrl, searchUrl, tagPath } from './urls'
+import { positiveInteger } from './dom'
+import { galleryUrl, readerPath, readerUrl, searchUrl, tagNamespaces, tagPath } from './urls'
 
-const searchTag = /^(tag|artist|character|parody|group|category|language):(?:"[^"]+"|[^"\s]+)$/i
+const searchTag = new RegExp(`^(${tagNamespaces.map(([, type]) => type).join('|')}):(?:"[^"]+"|[^"\\s]+)$`, 'i')
 
 function parseTags(doc: SiteDocument, base: URL): GalleryTag[] {
   const tags = new Map<string, GalleryTag>()

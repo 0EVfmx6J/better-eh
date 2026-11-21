@@ -1,22 +1,16 @@
-import type { CompleteTags, TagCompletion } from '@better-eh/core'
+import { searchTokenAt, type CompleteTags, type TagCompletion } from '@better-eh/core'
+import { tagNamespaces } from './urls'
 
-const tagTypes = new Map([
-  ['tag', 'tag'],
-  ['tags', 'tag'],
-  ['artist', 'artist'],
-  ['artists', 'artist'],
-  ['character', 'character'],
-  ['characters', 'character'],
-  ['parody', 'parody'],
-  ['parodies', 'parody'],
-  ['group', 'group'],
-  ['groups', 'group'],
-  ['category', 'category'],
-  ['categories', 'category'],
-  ['language', 'language'],
-  ['languages', 'language'],
-])
-const namespaces = new Set(tagTypes.values())
+const tagTypes = new Map<string, string>(
+  tagNamespaces.flatMap(
+    ([plural, type]) =>
+      [
+        [plural, type],
+        [type, type],
+      ] as const,
+  ),
+)
+const namespaces = new Set<string>(tagNamespaces.map(([, type]) => type))
 const cache = new Map<string, { key: string; label: string }[]>()
 const limit = 10
 export const containsHan = /\p{Script=Han}/u
@@ -64,12 +58,10 @@ async function findTags(query: string, type: string | undefined, signal: AbortSi
 }
 
 export function tagCompletionContext(query: string, caret: number) {
-  const tokens = [...query.matchAll(/(?:[^\s"]+|"[^"]*(?:"|$))+/g)]
-  const token = tokens.find(({ index, 0: value }) => caret > index && caret <= index + value.length)
+  const token = searchTokenAt(query, caret)
   if (!token) return undefined
 
-  const start = token.index
-  const end = start + token[0].length
+  const { start, end, existing } = token
   const input = query.slice(start, caret).normalize('NFKC').toLowerCase()
   const sign = input.startsWith('-') ? '-' : ''
   const value = input.slice(sign.length)
@@ -82,7 +74,6 @@ export function tagCompletionContext(query: string, caret: number) {
     .trim()
   if (!needle || needle.includes('"')) return undefined
 
-  const existing = new Set(tokens.filter((part) => part !== token).map((part) => part[0].toLowerCase()))
   const prefix = query.slice(0, start)
   const suffix = query.slice(end) || ' '
   return {

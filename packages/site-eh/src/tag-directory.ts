@@ -1,4 +1,4 @@
-import { createTagDirectoryLoader, type TagDirectory } from '@better-eh/core'
+import { createTagDirectoryLoader, searchTokenAt, type TagDirectory } from '@better-eh/core'
 
 // EhTagTranslation Database v7.30120.1 (CC BY-NC-SA 3.0 CN).
 const dictionaryPath = 'EhTagTranslation/Database'
@@ -75,12 +75,10 @@ function makeDirectory(raw: unknown): TagDirectory {
       return translations.get((namespaceAliases.get(namespace) ?? namespace) + ':' + value.slice(colon + 1).trim())
     },
     complete(query, caret) {
-      const tokens = Array.from(query.matchAll(/(?:[^\s"]+|"[^"]*(?:"|$))+/g))
-      const token = tokens.find(({ index, 0: value }) => caret > index && caret <= index + value.length)
+      const token = searchTokenAt(query, caret)
       if (!token) return []
 
-      const start = token.index
-      const end = start + token[0].length
+      const { start, end, existing } = token
       let input = normalize(query.slice(start, caret))
       const modifier = input.match(/^[-~]/)?.[0] ?? ''
       input = input.slice(modifier.length)
@@ -97,7 +95,6 @@ function makeDirectory(raw: unknown): TagDirectory {
         .trim()
       if (!needle || needle.includes('$') || needle.includes('"')) return []
 
-      const existing = new Set(tokens.filter((part) => part !== token).map((part) => part[0].toLowerCase()))
       const best: { entry: Entry; value: string; score: number }[] = []
       for (const entry of entries) {
         if (namespace && namespace !== 'tag' && namespace !== entry.namespace) continue

@@ -1,17 +1,9 @@
 import { createTagDirectoryLoader, type TagCompletion, type TagDirectory } from '@better-eh/core'
 import { containsHan, tagCompletionContext } from './tag-completion'
+import { tagNamespaces } from './urls'
 
 const dictionaryPath = '@l2studio/nhentai-tags@0.3.5/dist/index.js'
 const dictionarySources = ['https://cdn.jsdelivr.net/npm/' + dictionaryPath, 'https://unpkg.com/' + dictionaryPath]
-const namespaces = [
-  ['languages', 'language'],
-  ['categories', 'category'],
-  ['tags', 'tag'],
-  ['parodies', 'parody'],
-  ['characters', 'character'],
-  ['artists', 'artist'],
-  ['groups', 'group'],
-] as const
 
 function makeDirectory(source: string): TagDirectory {
   const labels = new Map<string, string>()
@@ -20,7 +12,7 @@ function makeDirectory(source: string): TagDirectory {
   const groups = new Map(
     Array.from(source.matchAll(/^    (\w+): \{\r?\n([\s\S]*?)^    \},?$/gm), (match) => [match[1], match[2]]),
   )
-  for (const [group, type] of namespaces) {
+  for (const [group, type] of tagNamespaces) {
     const rows = groups.get(group)
     if (!rows) throw new Error('标签词库格式有误。')
     for (const [, quoted, bare, text] of rows.matchAll(

@@ -2,6 +2,7 @@
 import { defaultRangeExtractor, useVirtualizer, type Range } from '@tanstack/vue-virtual'
 import { useResizeObserver } from '@vueuse/core'
 import { computed, inject, nextTick, onScopeDispose, shallowRef, useTemplateRef, watch } from 'vue'
+import { afterRenderedFrame } from '../utils/after-rendered-frame'
 import { galleryResizePositionKey, galleryViewportKey, type GalleryScrollAnchor } from '../utils/gallery-scroll'
 
 const props = defineProps<{
@@ -192,7 +193,7 @@ watch(
     const index = Math.floor(item / columns.value)
     restoringRow.value = index
     // An earlier group can resize after it mounts, shifting the target group's start.
-    await new Promise<number>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+    await afterRenderedFrame()
     if (cancelled) return
     updateGeometry()
     measureRows()

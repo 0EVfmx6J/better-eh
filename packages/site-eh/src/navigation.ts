@@ -1,12 +1,13 @@
 import { catalogCacheGroup, type PageCacheGroup, type SiteNavigationItem } from '@better-eh/core'
+import { galleryPath, readerPath } from './urls'
 
 export const catalogPaginationParams = ['next', 'prev', 'seek', 'jump', 'page']
 
 export function ehPageCacheGroup(url: URL): PageCacheGroup {
   const pathname = url.pathname.replace(/\/$/, '')
-  const gallery = /^\/g\/(\d+)\/[^/]+$/.exec(pathname)?.[1]
+  const gallery = galleryPath.exec(url.pathname)?.[1]
   if (gallery) return { kind: 'gallery', key: new URL(pathname, url).href }
-  const reader = /^\/s\/[^/]+\/(\d+)-\d+$/.exec(pathname)?.[1]
+  const reader = readerPath.exec(url.pathname)?.[1]
   if (reader) return { kind: 'reader', key: new URL('/g/' + reader, url).href }
   if (pathname === '/mytags') return { kind: 'tags', key: new URL(pathname, url).href }
   return catalogCacheGroup(url, catalogPaginationParams)

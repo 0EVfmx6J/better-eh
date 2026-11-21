@@ -1,5 +1,12 @@
-import type { CatalogPage, GallerySummary } from '@better-eh/core'
-import { imageUrl, localLink, positiveInteger, text, type SiteDocument } from './dom'
+import {
+  readImageUrl as imageUrl,
+  readLocalLink as localLink,
+  readText as text,
+  type CatalogPage,
+  type GallerySummary,
+  type SiteDocument,
+} from '@better-eh/core'
+import { positiveInteger } from './dom'
 import { favoritesPath, galleryPath, galleryUrl, tagPath } from './urls'
 
 function catalogTitle(doc: SiteDocument, url: URL): string | undefined {

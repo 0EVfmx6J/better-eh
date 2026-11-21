@@ -1,7 +1,7 @@
 import { useInfiniteScroll, useScroll, useTimeoutFn } from '@vueuse/core'
 import { computed, nextTick, onMounted, shallowRef, watch, type Ref } from 'vue'
 import { isPrimaryClick } from '../utils/is-primary-click'
-import { readerFrame } from '../utils/reader-frames'
+import { readerPageFrames } from '../utils/reader-frames'
 import { stopScrollMomentum } from '../utils/stop-scroll-momentum'
 import type { useNavigation } from './useNavigation'
 import { useReaderImages } from './useReaderImages'
@@ -72,7 +72,7 @@ export function useReader({
   const readerPagesBehind = 3
   const frames = computed(() =>
     readerSections.value.flatMap(({ chapter, url, page }) =>
-      (page.frames ?? [readerFrame(page, url)]).map((frame) => ({ ...frame, chapter })),
+      readerPageFrames(page, url).map((frame) => ({ ...frame, chapter })),
     ),
   )
   const {

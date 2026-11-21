@@ -16,7 +16,13 @@ import { usePageCacheStore } from '../stores/page-cache'
 import { usePagedHistoryStore } from '../stores/paged-history'
 import { appendUnique } from '../utils/append-unique'
 import { captureScrollPosition, type GalleryScrollAnchor, type GalleryScrollPosition } from '../utils/gallery-scroll'
-import { firstReaderIndex, queuedReaderPage, readerFrame, readerHasNext } from '../utils/reader-frames'
+import {
+  firstReaderIndex,
+  queuedReaderPage,
+  readerFrame,
+  readerHasNext,
+  readerPageFrames,
+} from '../utils/reader-frames'
 import { createReaderPageResolver } from '../utils/reader-pages'
 import { libraryPage, type LibraryPage } from '../utils/reading-library-route'
 
@@ -435,8 +441,8 @@ export function useNavigation(
         }
         page.value = nextPage
       } else if (current.kind === 'reader' && entry.page.kind === 'reader') {
-        const oldFrames = current.frames ?? [readerFrame(current, routeUrl)]
-        const incoming = entry.page.frames ?? [readerFrame(entry.page, entry.url)]
+        const oldFrames = readerPageFrames(current, routeUrl)
+        const incoming = readerPageFrames(entry.page, entry.url)
         const firstIndex = firstReaderIndex(current)
         const lastIndex = oldFrames.at(-1)?.index ?? current.index
         const adjacentFrames = incoming.filter((frame) =>
@@ -562,6 +568,7 @@ export function useNavigation(
     loadMore,
     loadReaderImage,
     loadReaderThumbnails,
+    readerGalleryUrl,
     loadGalleryComments: loader.loadComments,
     refreshGalleryComments: loader.refreshGalleryComments,
     loadGalleryCommentTotal: adapter.galleryCommentsUrl ? loader.loadGalleryCommentTotal : undefined,

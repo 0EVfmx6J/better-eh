@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ArrowUp, MessageSquare, RefreshCw, X } from '@lucide/vue'
+import { MessageSquare, RefreshCw, X } from '@lucide/vue'
 import { useInfiniteScroll, usePreferredReducedMotion, useScroll } from '@vueuse/core'
 import { computed, onBeforeUnmount, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { GalleryComments } from '@better-eh/core'
 import { usePullToRefresh } from '../composables/usePullToRefresh'
 import { appendUnique } from '../utils/append-unique'
 import { stopScrollMomentum } from '../utils/stop-scroll-momentum'
+import BackToTopButton from './BackToTopButton.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
 import LoadMoreIndicator from './LoadMoreIndicator.vue'
 import PullRefreshIndicator from './PullRefreshIndicator.vue'
@@ -296,18 +297,7 @@ function restoreFocus(): void {
             />
           </div>
         </div>
-        <Transition name="back-to-top">
-          <button
-            v-if="scrollY > 1"
-            class="icon-button back-to-top"
-            type="button"
-            title="回到评论顶部"
-            aria-label="回到评论顶部"
-            @click="backToTop"
-          >
-            <ArrowUp :size="21" aria-hidden="true" />
-          </button>
-        </Transition>
+        <BackToTopButton :visible="scrollY > 1" label="回到评论顶部" @click="backToTop" />
       </div>
     </dialog>
   </Transition>

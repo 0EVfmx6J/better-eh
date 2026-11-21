@@ -1,5 +1,5 @@
 import { nextTick, shallowRef, watch, type Ref } from 'vue'
-import type { GalleryTag, SiteAdapter } from '@better-eh/core'
+import { searchTokens, type GalleryTag, type SiteAdapter } from '@better-eh/core'
 import type AppHeader from '../components/AppHeader.vue'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import { isPrimaryClick } from '../utils/is-primary-click'
@@ -69,8 +69,10 @@ export function useGallerySearch(
     if (!term) return
     dismissTagSearch(false)
     const query = search.value.trimEnd()
-    const terms = query.toLowerCase().match(/(?:[^\s"]+|"[^"]*(?:"|$))+/g)
-    if (!terms?.includes(term.toLowerCase())) search.value = query ? query + ' ' + term : term
+    const normalizedTerm = term.toLowerCase()
+    if (!searchTokens(query.toLowerCase()).some((token) => token.text === normalizedTerm)) {
+      search.value = query ? query + ' ' + term : term
+    }
     searchOpen.value = true
     await nextTick()
     header.value?.focusSearchAtEnd()

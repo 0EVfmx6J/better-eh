@@ -10,6 +10,10 @@ export function readerFrame(page: ReaderPage, href: string): ReaderFrame {
   }
 }
 
+export function readerPageFrames(page: ReaderPage, href: string): ReaderFrame[] {
+  return page.frames ?? [readerFrame(page, href)]
+}
+
 export function readerHasNext(page: ReaderPage): boolean {
   const last = page.frames?.at(-1)?.index ?? page.index
   return Boolean(page.next && (!page.total || last < page.total))

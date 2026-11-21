@@ -1,3 +1,5 @@
+import type { SiteDocument } from './site-dom'
+
 export interface PageLinks {
   previous?: string
   next?: string
@@ -169,5 +171,5 @@ export interface SiteAdapter {
   loadTagDirectory?: () => Promise<TagDirectory>
   completeTags?: CompleteTags
   parseCommentsResponse?: (body: string, url: URL) => GalleryComments
-  parse: (document: Document | DocumentFragment, url: URL) => SitePage | undefined
+  parse: (document: SiteDocument, url: URL) => SitePage | undefined
 }

@@ -1,5 +1,11 @@
-import type { ReaderPage } from '@better-eh/core'
-import { imageUrl, localLink, positiveInteger, text, type SiteDocument } from './dom'
+import {
+  readImageUrl as imageUrl,
+  readLocalLink as localLink,
+  readText as text,
+  type ReaderPage,
+  type SiteDocument,
+} from '@better-eh/core'
+import { positiveInteger } from './dom'
 import { galleryUrl, readerPath, readerUrl } from './urls'
 
 export function parseReader(doc: SiteDocument, base: URL, id: string, index: number): ReaderPage | undefined {

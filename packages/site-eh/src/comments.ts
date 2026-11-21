@@ -1,6 +1,6 @@
-import { commentBody, type GalleryComments } from '@better-eh/core'
+import { commentBody, readLocalLink, type GalleryComments, type SiteDocument } from '@better-eh/core'
 
-export function parseComments(doc: Document | DocumentFragment, base: URL): GalleryComments | undefined {
+export function parseComments(doc: SiteDocument, base: URL): GalleryComments | undefined {
   const section = doc.querySelector('#cdiv')
   if (!section) return undefined
 
@@ -16,15 +16,10 @@ export function parseComments(doc: Document | DocumentFragment, base: URL): Gall
   })
 
   if (base.searchParams.get('hc') !== '1') {
-    for (const link of section.querySelectorAll<HTMLAnchorElement>('#chd a[href*="hc=1"]')) {
-      let target: URL
-      try {
-        target = new URL(link.getAttribute('href') ?? '', base)
-      } catch {
-        continue
-      }
+    for (const link of section.querySelectorAll('#chd a[href*="hc=1"]')) {
+      const target = readLocalLink(link, base)
       if (
-        target.origin !== base.origin ||
+        !target ||
         target.pathname.replace(/\/$/, '') !== base.pathname.replace(/\/$/, '') ||
         target.searchParams.get('hc') !== '1'
       )

@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { ArrowUp, Bookmark, Check, Menu, Trash2, X } from '@lucide/vue'
+import { Bookmark, Check, Menu, X } from '@lucide/vue'
 import { useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, provide, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
 import type { ReadingLibraryRepository, SiteAdapter, SiteNavigationItem, SitePage } from '@better-eh/core'
 import AppHeader from './components/AppHeader.vue'
+import BackToTopButton from './components/BackToTopButton.vue'
 import CatalogPage from './components/CatalogPage.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
+import GalleryActionSheet from './components/GalleryActionSheet.vue'
 import GalleryDetail from './components/GalleryDetail.vue'
 import LoadingSpinner from './components/LoadingSpinner.vue'
 import LoadMoreIndicator from './components/LoadMoreIndicator.vue'
@@ -525,37 +527,15 @@ function goBack(event: MouseEvent) {
       @dismiss="dismissTagSearch"
     />
     <Transition name="card-action-sheet" @after-leave="restoreCardActionFocus">
-      <dialog
+      <GalleryActionSheet
         v-if="cardActionSheet"
         ref="cardActionDialog"
-        class="card-action-sheet"
-        aria-labelledby="card-action-sheet-title"
-        @cancel.prevent="closeCardActionSheet"
-        @click.self="closeCardActionSheet"
-        @touchmove.self.prevent
-        @wheel.self.prevent
-      >
-        <div class="card-action-sheet-panel">
-          <header class="card-action-sheet-header">
-            <h2 id="card-action-sheet-title">{{ cardActionSheet.gallery.title }}</h2>
-            <button class="icon-button" type="button" aria-label="关闭画廊操作" @click="closeCardActionSheet">
-              <X :size="20" aria-hidden="true" />
-            </button>
-          </header>
-          <button
-            class="card-action-sheet-button"
-            :class="{ 'action-button-danger-subtle': cardRemovalSection }"
-            type="button"
-            autofocus
-            :disabled="bookmarksBusy"
-            @click="submitCardAction"
-          >
-            <Trash2 v-if="cardRemovalSection" :size="19" aria-hidden="true" />
-            <Bookmark v-else :size="19" aria-hidden="true" />
-            {{ cardRemovalSection ? `从${librarySections[cardRemovalSection]}移除` : '添加到稍后阅读' }}
-          </button>
-        </div>
-      </dialog>
+        :title="cardActionSheet.gallery.title"
+        :busy="bookmarksBusy"
+        :removal-section="cardRemovalSection"
+        @close="closeCardActionSheet"
+        @submit="submitCardAction"
+      />
     </Transition>
     <ConfirmationDialog
       v-if="removalDialog"
@@ -604,20 +584,13 @@ function goBack(event: MouseEvent) {
     </div>
   </div>
   <!-- A tap inside the scroller may only stop momentum on iOS, without sending a click. -->
-  <Transition name="back-to-top">
-    <button
-      v-if="showBackToTop"
-      class="icon-button back-to-top"
-      :class="{ 'is-reader': reader }"
-      :data-theme="theme"
-      lang="zh-CN"
-      type="button"
-      aria-label="回到顶部"
-      :title="backToTopTitle"
-      :disabled="Boolean(pending)"
-      @click="backToTop"
-    >
-      <ArrowUp :size="21" aria-hidden="true" />
-    </button>
-  </Transition>
+  <BackToTopButton
+    :visible="showBackToTop"
+    :class="{ 'is-reader': reader }"
+    :data-theme="theme"
+    lang="zh-CN"
+    :title="backToTopTitle"
+    :disabled="Boolean(pending)"
+    @click="backToTop"
+  />
 </template>

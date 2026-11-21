@@ -2,8 +2,9 @@ import { useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import type { ReadingGallery, ReadingLibraryRemoval, SiteAdapter } from '@better-eh/core'
+import type GalleryActionSheet from '../components/GalleryActionSheet.vue'
 import { useReadingLibraryStore } from '../stores/reading-library'
-import { readerFrame } from '../utils/reader-frames'
+import { readerPageFrames } from '../utils/reader-frames'
 import { librarySections, type LibrarySection } from '../utils/reading-library-route'
 import { bookmarkOrigin, useBookmarkFlight } from './useBookmarkFlight'
 import type { useNavigation } from './useNavigation'
@@ -20,7 +21,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
   const {
     activeReader: reader,
     currentUrl,
-    navigationState,
+    readerGalleryUrl,
     page,
     readerChapter,
     readerIndex,
@@ -33,7 +34,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
   const { changeLibrary } = readingLibrary
   const selectingGalleries = shallowRef(false)
   const cardActionSheet = shallowRef<{ gallery: ReadingGallery; trigger: HTMLElement; section?: LibrarySection }>()
-  const cardActionDialog = useTemplateRef<HTMLDialogElement>('cardActionDialog')
+  const cardActionDialog = useTemplateRef<InstanceType<typeof GalleryActionSheet>>('cardActionDialog')
   let cardActionTrigger: HTMLElement | undefined
   const removalMessages = {
     'remove-from-later': '已从稍后阅读移除',
@@ -77,8 +78,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     if (reader.value) {
       const queued = readingQueue.value?.[readerChapter.value]
       if (queued) return { ...queued, pages: reader.value.total || queued.pages }
-      const state = navigationState()
-      const href = reader.value.gallery ?? (state?.previousKind === 'gallery' ? state.previousUrl : undefined)
+      const href = readerGalleryUrl(reader.value)
       if (href) return { href: galleryKey(href), title: reader.value.title, pages: reader.value.total }
     }
     return undefined
@@ -135,15 +135,13 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     bookmarkFlight.cancel()
   })
 
-  watch(cardActionDialog, (dialog) => dialog?.showModal(), { flush: 'post' })
-
   watch(
     [currentUrl, readerIndex],
     () => {
       const gallery = readingGallery.value
       if (!gallery) return
       const section = readerSections.value.find(({ chapter }) => chapter === readerChapter.value)
-      const frames = section && (section.page.frames ?? [readerFrame(section.page, section.url)])
+      const frames = section && readerPageFrames(section.page, section.url)
       const frame = frames?.find(({ index }) => index === readerIndex.value)
       const progress = frame ? { href: frame.href, index: frame.index } : undefined
       void changeLibrary({ type: 'visit', gallery, progress })
@@ -154,6 +152,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
   watch(desktop, (wide) => {
     if (wide) closeCardActionSheet()
   })
+
   function galleryKey(href: string): string {
     const url = new URL(href)
     return adapter.canonicalGalleryUrl?.(url) ?? url.href
@@ -218,14 +217,14 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     const section = cardRemovalSection.value
     closeCardActionSheet()
     if (section) {
-      cardActionDialog.value?.close()
+      cardActionDialog.value?.closeDialog()
       const type = section === 'history' ? 'remove-from-history' : 'remove-from-later'
       const href = selection.section ? selection.gallery.href : galleryKey(selection.gallery.href)
       requestRemoval({ type, href }, selection.trigger, selection.gallery.title)
       return
     }
     const start = bookmarkOrigin(event.currentTarget)
-    cardActionDialog.value?.close()
+    cardActionDialog.value?.closeDialog()
     void toggleReadLater(selection.trigger, selection.gallery, start)
   }
 

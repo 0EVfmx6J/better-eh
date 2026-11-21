@@ -1,6 +1,8 @@
 export { commentBody, linkifyComment } from './comment-text'
 export { catalogCacheGroup, createPageLoader, nativePageFlag } from './navigation'
 export type { PageCache, PageEntry } from './navigation'
+export { readImageUrl, readLocalLink, readText, resolveHttpUrl, type SiteDocument } from './site-dom'
+export { searchTokenAt, searchTokens } from './search-query'
 export { createTagDirectoryLoader } from './tag-directory'
 export type * from './types'
 export type * from './reading-library'
