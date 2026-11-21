@@ -1,10 +1,11 @@
 import { useTimeoutFn } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed, nextTick, onBeforeUnmount, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
+import { computed, nextTick, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import type { ReadingGallery, ReadingLibraryRemoval, SiteAdapter } from '@better-eh/core'
 import { useReadingLibraryStore } from '../stores/reading-library'
 import { readerFrame } from '../utils/reader-frames'
 import { librarySections, type LibrarySection } from '../utils/reading-library-route'
+import { bookmarkOrigin, useBookmarkFlight } from './useBookmarkFlight'
 import type { useNavigation } from './useNavigation'
 
 interface GalleryLibraryOptions {
@@ -45,8 +46,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     4800,
     { immediate: false },
   )
-  const bookmarkFlight = useTemplateRef<HTMLElement>('bookmarkFlight')
-  let flightAnimation: Animation | undefined
+  const bookmarkFlight = useBookmarkFlight(app, reducedMotion)
   const pendingRemoval = shallowRef<{ change: ReadingLibraryRemoval; trigger?: HTMLElement; title?: string }>()
   const removalFailed = shallowRef(false)
   const removalDialog = computed(() => {
@@ -132,7 +132,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     cardActionTrigger = undefined
     libraryNotice.value = undefined
     stopLibraryNotice()
-    flightAnimation?.cancel()
+    bookmarkFlight.cancel()
   })
 
   watch(cardActionDialog, (dialog) => dialog?.showModal(), { flush: 'post' })
@@ -154,8 +154,6 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
   watch(desktop, (wide) => {
     if (wide) closeCardActionSheet()
   })
-  onBeforeUnmount(() => flightAnimation?.cancel())
-
   function galleryKey(href: string): string {
     const url = new URL(href)
     return adapter.canonicalGalleryUrl?.(url) ?? url.href
@@ -214,7 +212,7 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
     cardActionTrigger = undefined
   }
 
-  function submitCardAction(): void {
+  function submitCardAction(event: MouseEvent): void {
     const selection = cardActionSheet.value
     if (!selection) return
     const section = cardRemovalSection.value
@@ -226,86 +224,69 @@ export function useGalleryLibrary({ adapter, navigation, app, desktop, reducedMo
       requestRemoval({ type, href }, selection.trigger, selection.gallery.title)
       return
     }
-    void toggleReadLater(selection.trigger, selection.gallery, true)
+    const start = bookmarkOrigin(event.currentTarget)
+    cardActionDialog.value?.close()
+    void toggleReadLater(selection.trigger, selection.gallery, start)
   }
 
-  function animateBookmark(source: HTMLElement): boolean {
-    const token = bookmarkFlight.value
-    const sidebar = app.value?.querySelector('.site-sidebar')
-    const destination = sidebar?.querySelector('[data-section="later"] svg')
-    if (!token || !sidebar || !destination || reducedMotion.value || !source.isConnected) return false
-    const start = (source.querySelector('svg') ?? source).getBoundingClientRect()
-    const end = destination.getBoundingClientRect()
-    const bounds = sidebar.getBoundingClientRect()
-    const startX = start.x + start.width / 2
-    const startY = start.y + start.height / 2
-    const endX = end.x + end.width / 2
-    const endY = end.y + end.height / 2
-    if (!end.width || endY < bounds.top || endY > bounds.bottom || startY < 0 || startY > innerHeight) return false
+  async function showBookmarkResult(
+    saved: boolean,
+    start: ReturnType<typeof bookmarkOrigin>,
+    options: { batch?: boolean; added?: boolean } = {},
+  ): Promise<void> {
+    const { batch, added = saved } = options
+    const flewToSidebar = added && bookmarkFlight.fly(start, bookmarkFlight.sidebarDestination())
+    if (flewToSidebar && !batch) return
 
-    const frames = Array.from({ length: 9 }, (_, step) => {
-      const progress = step / 8
-      const x = startX + (endX - startX) * progress
-      const arc = 160 * progress * (1 - progress)
-      const y = startY + (endY - startY) * progress - arc
-      return {
-        transform: `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${1 - 0.45 * progress})`,
-        opacity: 1 - 0.8 * progress ** 4,
-      }
-    })
-    flightAnimation = token.animate(frames, { duration: 440, easing: 'cubic-bezier(.25, .75, .35, 1)' })
-    flightAnimation.onfinish = () => {
-      destination.animate([{ scale: '1' }, { scale: '1.23', offset: 0.42 }, { scale: '1' }], {
-        duration: 220,
-        easing: 'ease-out',
-      })
-    }
-    return true
+    libraryNotice.value = saved
+      ? { text: batch ? '所选画廊已在稍后阅读' : '已加入稍后阅读', saved: true }
+      : { text: '保存失败，请重试', failed: true }
+    const notice = libraryNotice.value
+    startLibraryNotice()
+    if (!added || flewToSidebar) return
+
+    await nextTick()
+    if (libraryNotice.value === notice) bookmarkFlight.flyToNotice(start)
   }
 
-  async function toggleReadLater(source: EventTarget | null, gallery: ReadingGallery | undefined, fromCatalog = false) {
+  async function toggleReadLater(
+    source: EventTarget | null,
+    gallery: ReadingGallery | undefined,
+    start = bookmarkOrigin(source),
+  ) {
     if (!gallery || bookmarksBusy.value) return
-    if (fromCatalog) {
-      libraryNotice.value = undefined
-      stopLibraryNotice()
-      flightAnimation?.cancel()
-    }
     const { title, cover, pages } = gallery
     const href = galleryKey(gallery.href)
     if (savedGalleryUrls.value.has(href)) {
       requestRemoval({ type: 'remove-from-later', href }, source, title)
       return
     }
+    libraryNotice.value = undefined
+    stopLibraryNotice()
+    bookmarkFlight.cancel()
     const url = currentUrl.value
     const saved = await changeLibrary({ type: 'save-for-later', gallery: { href, title, cover, pages } })
-    if (!fromCatalog || url !== currentUrl.value) return
-    if (saved && desktop.value && source instanceof HTMLElement && animateBookmark(source)) return
-    libraryNotice.value = saved ? { text: '已加入稍后阅读', saved: true } : { text: '保存失败，请重试', failed: true }
-    startLibraryNotice()
+    if (url === currentUrl.value) await showBookmarkResult(saved, start)
   }
 
   async function saveSelectedForLater(items: readonly ReadingGallery[], event: MouseEvent): Promise<void> {
     if (bookmarksBusy.value || !items.length) return
-    const source = event.currentTarget
+    const start = bookmarkOrigin(event.currentTarget)
     const url = currentUrl.value
     libraryNotice.value = undefined
     stopLibraryNotice()
-    flightAnimation?.cancel()
+    bookmarkFlight.cancel()
     const galleries = items.map(({ href, title, cover, pages }) => ({ href: galleryKey(href), title, cover, pages }))
     const hasNewGallery = galleries.some(({ href }) => !savedGalleryUrls.value.has(href))
     const saved = await changeLibrary({ type: 'save-many-for-later', galleries })
     if (url !== currentUrl.value) return
     if (saved) {
-      if (hasNewGallery && desktop.value && source instanceof HTMLElement) animateBookmark(source)
       selectingGalleries.value = false
       await nextTick()
       if (url !== currentUrl.value) return
       app.value?.querySelector<HTMLElement>('.catalog-title h1')?.focus({ preventScroll: true })
     }
-    libraryNotice.value = saved
-      ? { text: '所选画廊已在稍后阅读', saved: true }
-      : { text: '保存失败，请重试', failed: true }
-    startLibraryNotice()
+    await showBookmarkResult(saved, start, { batch: true, added: saved && hasNewGallery })
   }
 
   function readAll(): void {

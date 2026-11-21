@@ -399,7 +399,7 @@ function goBack(event: MouseEvent) {
         :open-action-href="cardActionSheet?.gallery.href"
         @navigate="activate"
         @save-selected="saveSelectedForLater"
-        @toggle-read-later="(event, gallery) => toggleReadLater(event.currentTarget, gallery, true)"
+        @toggle-read-later="(event, gallery) => toggleReadLater(event.currentTarget, gallery)"
         @open-actions="openCardActionSheet"
       />
       <GalleryDetail
@@ -575,6 +575,7 @@ function goBack(event: MouseEvent) {
         </p>
         <a
           v-if="libraryNotice.saved"
+          ref="bookmarkNoticeDestination"
           :href="libraryUrl(home, 'later')"
           @click="activate($event, libraryUrl(home, 'later'))"
         >
