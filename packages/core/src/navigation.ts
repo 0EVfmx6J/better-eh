@@ -12,6 +12,8 @@ export interface PageCache {
   update(kind: SitePage['kind'], update: (entry: PageEntry) => PageEntry | undefined): void
 }
 
+export const nativePageFlag = 'better-eh-native'
+
 export function catalogCacheGroup(url: URL, paginationParams: readonly string[]): PageCacheGroup {
   const group = new URL(url)
   group.pathname = group.pathname.replace(/\/$/, '')

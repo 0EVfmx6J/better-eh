@@ -5,6 +5,9 @@
   @apply block;
   touch-action: pan-y pinch-zoom;
 }
+:host([hidden]) {
+  @apply hidden;
+}
 *,
 *::before,
 *::after {
@@ -46,22 +49,6 @@ svg {
   outline-offset: 3px;
 }
 
-:is(.eh-app, .back-to-top) {
-  --paper: #fafafa;
-  --surface: #fff;
-  --panel: #f0f0f0;
-  --ink: #161616;
-  --muted: #626262;
-  --line: #e1e1e1;
-  --danger-bg: #b42318;
-  --danger-text: #fff;
-  --danger-hover: #912018;
-  --danger-subtle-bg: #fef3f2;
-  --danger-subtle-text: #b42318;
-  --danger-subtle-hover: #fee4e2;
-  --radius: 12px;
-  color-scheme: light;
-}
 .eh-app {
   height: 100vh;
   height: 100dvh;
@@ -81,21 +68,6 @@ svg {
 }
 .eh-app.stop-scroll {
   @apply overflow-y-hidden;
-}
-:is(.eh-app, .back-to-top)[data-theme='dark'] {
-  --paper: #101010;
-  --surface: #171717;
-  --panel: #212121;
-  --ink: #f4f4f4;
-  --muted: #a6a6a6;
-  --line: #303030;
-  --danger-bg: #f97066;
-  --danger-text: #280b08;
-  --danger-hover: #fda29b;
-  --danger-subtle-bg: #3b1518;
-  --danger-subtle-text: #fda29b;
-  --danger-subtle-hover: #511c20;
-  color-scheme: dark;
 }
 .shell {
   --shell-width: 1440px;

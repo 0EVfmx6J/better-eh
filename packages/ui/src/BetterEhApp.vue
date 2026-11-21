@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, useTemplateRef, watch } from 'vue'
+import { computed, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
 import { useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { ArrowUp, Bookmark, Check, Menu, Trash2, X } from '@lucide/vue'
@@ -34,6 +34,8 @@ const props = defineProps<{
   initialPage: SitePage
   initialUrl: string
   nativeLink?: (href: string) => string
+  viewActive?: ShallowRef<boolean>
+  openingNative?: ShallowRef<boolean>
   readingLibraryRepository: ReadingLibraryRepository
 }>()
 const app = useTemplateRef<HTMLElement>('app')
@@ -41,7 +43,7 @@ const app = useTemplateRef<HTMLElement>('app')
 const header = useTemplateRef('header')
 const siteMenu = useTemplateRef('siteMenu')
 const menuOpen = shallowRef(false)
-const navigation = useNavigation(props.adapter, props.initialPage, props.initialUrl, app)
+const navigation = useNavigation(props.adapter, props.initialPage, props.initialUrl, app, props.viewActive)
 const {
   page,
   navigate,
@@ -163,8 +165,17 @@ const pullRefreshBlocked = computed(() => refreshBlocked.value || hasPrevious.va
 const { offset: pullOffset, ready: pullReady } = usePullToRefresh(app, pullRefreshBlocked, reducedMotion, refreshPage)
 const activeUrl = computed(() => new URL(currentUrl.value))
 const home = computed(() => props.adapter.home(activeUrl.value))
+const nativeHref = computed(() =>
+  page.value.kind === 'library'
+    ? undefined
+    : props.nativeLink?.(readerFrames.value[activeFramePosition.value]?.href ?? currentUrl.value),
+)
 const navigationItems = computed<SiteNavigationItem[]>(() => [
-  ...(props.adapter.navigation?.(activeUrl.value) ?? []),
+  ...(props.adapter.navigation?.(activeUrl.value) ?? []).map((item) =>
+    item.native && props.nativeLink && new URL(item.href).origin === activeUrl.value.origin
+      ? { ...item, href: props.nativeLink(item.href) }
+      : item,
+  ),
   { id: 'history', label: librarySections.history, href: libraryUrl(home.value, 'history') },
   { id: 'later', label: librarySections.later, href: libraryUrl(home.value, 'later') },
 ])
@@ -312,7 +323,8 @@ function goBack(event: MouseEvent) {
       :refreshing="refreshing"
       :pull-offset="pullOffset"
       :pull-ready="pullReady"
-      :native-href="page.kind === 'library' ? undefined : nativeLink?.(currentUrl)"
+      :native-href="nativeHref"
+      :opening-native="openingNative?.value"
       :can-bookmark="Boolean(readingGallery)"
       :saved-for-later="savedForLater"
       :bookmarks-busy="bookmarksBusy"
@@ -541,9 +553,23 @@ function goBack(event: MouseEvent) {
         </a>
       </div>
     </Transition>
-    <div v-if="pending" :class="refreshing && pullOffset > 0 ? 'sr-only' : 'loading-note'" role="status">
+    <div
+      v-if="openingNative?.value || pending"
+      :class="!openingNative?.value && refreshing && pullOffset > 0 ? 'sr-only' : 'loading-note'"
+      role="status"
+    >
       <LoadingSpinner :size="17" aria-hidden="true" />
-      {{ seekingReader ? '正在跳页' : returningToStart ? '正在返回第 1 页' : refreshing ? '正在刷新' : '正在加载' }}
+      {{
+        openingNative?.value
+          ? '正在打开原站…'
+          : seekingReader
+            ? '正在跳页'
+            : returningToStart
+              ? '正在返回第 1 页'
+              : refreshing
+                ? '正在刷新'
+                : '正在加载'
+      }}
     </div>
   </div>
   <!-- A tap inside the scroller may only stop momentum on iOS, without sending a click. -->

@@ -1,0 +1,80 @@
+@import '@better-eh/ui/theme.css';
+
+:host {
+  all: initial;
+  position: fixed;
+  z-index: 2147483647;
+  top: 0;
+  right: max(12px, env(safe-area-inset-right));
+  display: block;
+  pointer-events: none;
+}
+
+button {
+  position: relative;
+  top: calc(35px + env(safe-area-inset-top));
+  display: block;
+  width: 48px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cord {
+  position: absolute;
+  top: calc(-35px - env(safe-area-inset-top));
+  left: 23px;
+  width: 2px;
+  height: calc(51px + env(safe-area-inset-top));
+  background: var(--ink);
+  box-shadow: 0 0 0 1px var(--surface);
+  transform-origin: center top;
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  top: 5px;
+  left: 7px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  box-sizing: border-box;
+  place-items: center;
+  border: 1px solid var(--surface);
+  border-radius: 50%;
+  color: var(--surface);
+  background: var(--ink);
+  box-shadow: 0 2px 6px #0005;
+}
+
+.handle::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-top: -3px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  rotate: 45deg;
+}
+
+button:focus-visible {
+  outline: none;
+}
+
+button:focus-visible .handle {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+@media (hover: hover) {
+  button:hover .handle {
+    background: var(--muted);
+  }
+}

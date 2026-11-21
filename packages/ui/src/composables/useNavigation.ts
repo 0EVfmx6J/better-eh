@@ -1,6 +1,6 @@
-import { computed, nextTick, ref, shallowRef, type Ref } from 'vue'
+import { computed, nextTick, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue'
 import { useEventListener } from '@vueuse/core'
-import { createPageLoader } from '@better-eh/core'
+import { createPageLoader, nativePageFlag } from '@better-eh/core'
 import type {
   CatalogPage,
   GalleryPage,
@@ -12,6 +12,7 @@ import type {
 } from '@better-eh/core'
 import { useCatalogHistoryStore } from '../stores/catalog-history'
 import { usePageCacheStore } from '../stores/page-cache'
+import { appendUnique } from '../utils/append-unique'
 import { libraryPage, type LibraryPage } from '../utils/reading-library-route'
 import { firstReaderIndex, queuedReaderPage, readerFrame, readerHasNext } from '../utils/reader-frames'
 import { createReaderPageResolver } from '../utils/reader-pages'
@@ -47,23 +48,12 @@ interface ReaderSection {
   page: ReaderPage
 }
 
-function appendUnique<T>(current: T[], incoming: T[], key: (item: T) => string): T[] {
-  const seen = new Set(current.map(key))
-  return current.concat(
-    incoming.filter((item) => {
-      const itemKey = key(item)
-      if (seen.has(itemKey)) return false
-      seen.add(itemKey)
-      return true
-    }),
-  )
-}
-
 export function useNavigation(
   adapter: SiteAdapter,
   initialPage: SitePage,
   initialUrl: string,
   viewport: Readonly<Ref<HTMLElement | null>>,
+  viewActive?: Readonly<Ref<boolean>>,
 ) {
   const currentUrl = ref(initialUrl)
   function localPage(url: string): LibraryPage | undefined {
@@ -161,6 +151,7 @@ export function useNavigation(
   }
 
   function showReaderFrame(chapter: number, index: number): void {
+    if (viewActive?.value === false) return
     const chapters = readingQueue.value
     if (chapter !== readerChapter.value && chapters) {
       const section = readerSections.value.find((item) => item.chapter === chapter)
@@ -408,7 +399,7 @@ export function useNavigation(
   }
 
   async function loadMore(direction: 'next' | 'previous' = 'next'): Promise<void> {
-    if (pending.value || appendController || !currentUrl.value) return
+    if (viewActive?.value === false || pending.value || appendController || !currentUrl.value) return
     const prepend = direction === 'previous'
     const routePage = page.value
     const leading = prepend ? firstSection.value : undefined
@@ -556,9 +547,15 @@ export function useNavigation(
     }
   }
 
+  const abortRequests = () => [active, appendController].forEach((request) => request?.abort())
+  onScopeDispose(abortRequests)
+  if (viewActive)
+    watch(viewActive, (visible) => {
+      if (!visible) abortRequests()
+    })
   history.scrollRestoration = 'manual'
   useEventListener(window, 'popstate', () => {
-    void navigate(location.href, 'pop')
+    if (history.state?.[nativePageFlag] !== true) void navigate(location.href, 'pop')
   })
   return {
     currentUrl,

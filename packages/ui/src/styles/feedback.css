@@ -165,3 +165,17 @@
 .infinite-error {
   @apply inline-flex items-center gap-[10px] text-muted text-[12px];
 }
+.native-frame-notice {
+  @apply fixed z-20 m-0 max-w-[calc(100%-24px)] rounded-[9px] px-3 py-2 text-[13px];
+  inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) auto auto;
+  background: #161616;
+  color: #fff;
+}
+
+.native-frame-notice a {
+  @apply font-semibold underline underline-offset-2;
+}
+
+.native-frame-notice a:focus-visible {
+  outline-color: currentColor;
+}

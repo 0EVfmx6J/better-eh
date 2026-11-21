@@ -27,6 +27,7 @@ defineProps<{
   pullOffset: number
   pullReady: boolean
   nativeHref?: string
+  openingNative?: boolean
   canBookmark: boolean
   savedForLater: boolean
   bookmarksBusy: boolean
@@ -164,10 +165,13 @@ defineExpose({
               v-if="nativeHref"
               class="icon-button native-button"
               :href="nativeHref"
+              :aria-disabled="openingNative || undefined"
               aria-label="打开原站"
               title="打开原站"
-              ><ExternalLink :size="18"
-            /></a>
+            >
+              <LoadingSpinner v-if="openingNative" :size="18" aria-hidden="true" />
+              <ExternalLink v-else :size="18" aria-hidden="true" />
+            </a>
           </div>
         </Teleport>
       </div>
