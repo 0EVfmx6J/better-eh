@@ -249,7 +249,7 @@ importers:
         version: link:../../packages/site-eh
       '@better-eh/site-nhentai':
         specifier: workspace:*
-        version: link:../../packages/site-nhentai
+        version: link:../../packages/site-nh
       '@better-eh/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -291,7 +291,7 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  packages/site-nhentai:
+  packages/site-nh:
     dependencies:
       '@better-eh/core':
         specifier: workspace:*
