@@ -20,8 +20,8 @@ export default defineConfig({
         namespace: 'better-eh',
         version: manifest.version,
         description: {
-          '': 'A gallery browser for E-Hentai, ExHentai and NH on desktop and iOS',
-          'zh-CN': '适用于桌面 Tampermonkey 和 iOS Userscripts 的 E-Hentai、ExHentai 和 NH 画廊浏览器。',
+          '': 'A gallery browser for E-Hentai, ExHentai and nHentai on desktop and iOS',
+          'zh-CN': '适用于桌面 Tampermonkey 和 iOS Userscripts 的 E-Hentai、ExHentai 和 nHentai 画廊浏览器。',
         },
         match: [...ehMatchPatterns, ...nhMatchPatterns],
         'run-at': 'document-end',
@@ -51,7 +51,7 @@ export default defineConfig({
  * Tag translations: EhTagTranslation Database contributors, v7.30120.1
  * https://github.com/EhTagTranslation/Database — CC BY-NC-SA 3.0 CN
  * https://creativecommons.org/licenses/by-nc-sa/3.0/cn/
- * NH translations: lgou2w / L2 Studio, @l2studio/nhentai-tags 0.3.5
+ * nHentai translations: lgou2w / L2 Studio, @l2studio/nhentai-tags 0.3.5
  * https://github.com/l2studio/nhentai-tags — package Apache-2.0, translation data CC BY-SA 3.0
  * https://creativecommons.org/licenses/by-sa/3.0/ — Chinese labels loaded on demand
  */`
