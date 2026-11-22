@@ -12,7 +12,7 @@
 }
 .header-inner {
   @apply grid min-h-[70px];
-  grid-template-columns: 1fr minmax(0, 420px) 1fr;
+  grid-template-columns: minmax(0, 1fr) clamp(440px, 54%, 720px) minmax(0, 1fr);
   @apply items-center gap-[18px];
 }
 .header-with-back {
@@ -51,8 +51,22 @@
   @apply relative min-w-0 rounded-xl bg-panel;
   padding: 0 5px 0 14px;
 }
+.header-inner > button.search-form {
+  @apply bg-panel px-3.5 hover:bg-line active:bg-line;
+}
 .header-compact-search > button.search-form {
-  @apply col-span-full row-start-2 bg-panel px-3.5 active:bg-line;
+  @apply col-span-full row-start-2;
+}
+.search-panel-desktop {
+  @apply fixed inset-x-0 top-0 m-0 w-full max-w-none overflow-y-auto overscroll-contain border-0 border-b border-line bg-surface p-0 text-ink shadow-lg;
+  padding-top: env(safe-area-inset-top);
+  max-height: min(540px, 76dvh);
+}
+.search-panel-desktop::backdrop {
+  background: #0006;
+}
+.search-panel-desktop .search-editor-row {
+  @apply sticky top-0 z-1 min-h-[70px] bg-surface;
 }
 .search-box:has(> input:focus) {
   outline: 1px solid var(--muted);
@@ -86,17 +100,10 @@
   outline-offset: -3px;
 }
 .tag-suggestions {
-  @apply absolute z-2;
-  inset: calc(100% + 6px) 0 auto;
-  max-height: min(295px, 36svh);
-  @apply m-0 overflow-auto overscroll-contain p-[4px];
-  border: 1px solid var(--line);
-  @apply rounded-xl bg-surface text-ink;
-  box-shadow: 0 6px 24px #0002;
-  @apply list-none;
+  @apply mt-3 list-none;
 }
 .tag-suggestions [role='option'] {
-  @apply grid min-h-[48px] content-center;
+  @apply grid min-h-12 content-center;
   padding: 5px 10px;
   @apply cursor-pointer rounded-[7px] wrap-anywhere;
 }
@@ -119,12 +126,6 @@
 }
 .tag-suggestion-status button {
   @apply min-h-[36px];
-}
-.search-form-expanded .tag-suggestions {
-  @apply static mt-3 max-h-none overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none;
-}
-.search-form-expanded .tag-suggestions [role='option'] {
-  @apply min-h-12;
 }
 .search-condition {
   @apply border border-line bg-panel px-3 active:bg-line;
@@ -270,9 +271,12 @@
   }
 }
 @media (min-width: 960px) {
+  .header-inner > button.search-form {
+    @apply min-h-12 text-[15px];
+  }
   .reader-header {
     @apply w-full;
-    grid-template-columns: minmax(0, 1fr) clamp(160px, 100% - 800px, 300px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) clamp(160px, 100% - 800px, 440px) minmax(0, 1fr);
     @apply mx-0 gap-[16px] px-0;
   }
   .reader-header .header-brand {

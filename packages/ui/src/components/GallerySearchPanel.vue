@@ -7,25 +7,24 @@ import ActionButton from './ActionButton.vue'
 import ConfirmationDialog from './ConfirmationDialog.vue'
 import TagSearchBox from './TagSearchBox.vue'
 
-const props = defineProps<{ query: string; completeTags?: CompleteTags }>()
+const props = defineProps<{ query: string; desktop: boolean; completeTags?: CompleteTags }>()
 const emit = defineEmits<{ close: []; loadTags: []; search: [query: string] }>()
-const dialog = useTemplateRef('dialog')
+const panel = useTemplateRef<HTMLDialogElement>('panel')
 const searchBox = useTemplateRef('searchBox')
 const draft = shallowRef('')
 const conditions = shallowRef(searchTokens(props.query).map(({ text }) => text))
 const confirmClear = shallowRef(false)
 const viewport = window.visualViewport
 useEventListener(viewport, ['resize', 'scroll'], fitViewport)
-
 onMounted(() => {
   fitViewport()
-  dialog.value?.showModal()
+  panel.value?.showModal()
 })
-onBeforeUnmount(() => dialog.value?.close())
+onBeforeUnmount(() => panel.value?.close())
 
 function fitViewport(): void {
-  const element = dialog.value
-  if (!element || !viewport) return
+  const element = panel.value
+  if (props.desktop || !element || !viewport) return
   const scale = viewport.scale
   element.style.setProperty('--search-height', `${viewport.height * scale}px`)
   element.style.setProperty('--search-top', scale <= 1.01 ? `${viewport.offsetTop}px` : '0px')
@@ -60,19 +59,28 @@ function search(): void {
 
 <template>
   <dialog
-    id="better-eh-mobile-search"
-    ref="dialog"
-    class="fixed inset-x-0 top-[var(--search-top,0px)] m-0 h-[var(--search-height,100dvh)] max-h-none w-full max-w-none overflow-y-auto overscroll-contain border-0 bg-surface p-0 text-ink"
-    aria-labelledby="better-eh-mobile-search-title"
-    @cancel.prevent="emit('close')"
+    id="better-eh-gallery-search"
+    ref="panel"
+    :class="
+      desktop
+        ? 'search-panel-desktop'
+        : 'fixed inset-x-0 top-[var(--search-top,0px)] m-0 h-[var(--search-height,100dvh)] max-h-none w-full max-w-none overflow-y-auto overscroll-contain border-0 bg-surface p-0 text-ink'
+    "
+    :aria-label="desktop ? '搜索画廊' : undefined"
+    :aria-labelledby="desktop ? undefined : 'better-eh-gallery-search-title'"
+    @cancel.self.prevent="emit('close')"
+    @click.self="desktop && emit('close')"
+    @touchmove.self.prevent
+    @wheel.self.prevent
   >
     <div
+      v-if="!desktop"
       class="sticky top-0 z-3 flex items-center gap-2 border-b border-line bg-surface py-1.5 pt-[max(6px,env(safe-area-inset-top))] pr-[max(16px,env(safe-area-inset-right))] pl-[max(12px,env(safe-area-inset-left))]"
     >
       <button class="icon-button" type="button" aria-label="返回" @click="emit('close')">
         <ArrowLeft :size="22" aria-hidden="true" />
       </button>
-      <h2 id="better-eh-mobile-search-title" class="grow text-[17px] font-[650]">搜索画廊</h2>
+      <h2 id="better-eh-gallery-search-title" class="grow text-[17px] font-[650]">搜索画廊</h2>
       <ActionButton
         class="min-h-11 px-4"
         variant="primary"
@@ -84,15 +92,25 @@ function search(): void {
     <TagSearchBox
       ref="searchBox"
       v-model="draft"
-      class="pt-3 pr-[max(16px,env(safe-area-inset-right))] pb-[max(16px,env(safe-area-inset-bottom))] pl-[max(16px,env(safe-area-inset-left))]"
+      :class="
+        desktop
+          ? 'shell pb-4'
+          : 'pt-3 pr-[max(16px,env(safe-area-inset-right))] pb-[max(16px,env(safe-area-inset-bottom))] pl-[max(16px,env(safe-area-inset-left))]'
+      "
       :complete-tags="completeTags"
       :placeholder="conditions.length ? '添加更多条件' : '输入关键词或标签'"
-      expanded
       @load="emit('loadTags')"
-      @submit="addConditions(draft)"
-      @add-tag="addConditions"
+      @add="addConditions"
       @select-history="restoreHistory"
     >
+      <template v-if="desktop" #actions>
+        <ActionButton variant="primary" :disabled="!conditions.length && !draft.trim() && !query" @click="search">
+          搜索
+        </ActionButton>
+        <button class="icon-button" type="button" aria-label="关闭搜索" title="关闭搜索" @click="emit('close')">
+          <X :size="20" aria-hidden="true" />
+        </button>
+      </template>
       <div v-if="conditions.length" class="my-3">
         <div class="mb-2 flex items-center justify-between gap-2 px-2.5 text-xs text-muted">
           <h3 id="better-eh-search-conditions" class="font-medium">搜索条件</h3>

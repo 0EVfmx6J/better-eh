@@ -10,9 +10,9 @@ import CatalogPage from './components/CatalogPage.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import GalleryActionSheet from './components/GalleryActionSheet.vue'
 import GalleryDetail from './components/GalleryDetail.vue'
+import GallerySearchPanel from './components/GallerySearchPanel.vue'
 import InfiniteScroll from './components/InfiniteScroll.vue'
 import LoadingSpinner from './components/LoadingSpinner.vue'
-import MobileSearchDialog from './components/MobileSearchDialog.vue'
 import PageLinks from './components/PageLinks.vue'
 import ReaderPages from './components/ReaderPages.vue'
 import ReaderProgress from './components/ReaderProgress.vue'
@@ -175,6 +175,9 @@ const {
   desktopNavigation,
   reducedMotion,
   focusNavigation: () => header.value?.focusNavigation(),
+})
+watch([chromeVisible, () => props.viewActive?.value], ([visible, active]) => {
+  if (!visible || active === false) void closeSearch(false)
 })
 provide(galleryViewportKey, { viewport: app, restoration: navigation.galleryRestoration, returningToTop })
 const refreshBlocked = computed(() => Boolean(pending.value || savingTags.value))
@@ -361,14 +364,13 @@ function goBack(event: MouseEvent) {
       <AppHeader
         v-show="chromeVisible"
         ref="header"
-        v-model:search="search"
+        :search="search"
         :search-open="searchOpen"
         :home="home"
         :back="back"
         :has-navigation="navigationItems.length > 0"
         :menu-open="menuOpen"
         :compact-search="compactSearch"
-        :complete-tags="adapter.completeTags"
         :wide-reader="wideReader"
         :small-reader-header="smallReaderHeader"
         :is-reader="Boolean(reader)"
@@ -385,20 +387,19 @@ function goBack(event: MouseEvent) {
         @go-back="goBack"
         @open-site-menu="openSiteMenu"
         @open-search="openSearch()"
-        @load-tags="loadTags"
-        @submit-search="submitSearch"
         @refresh="refreshPage"
         @toggle-bookmark="toggleReadLater($event.currentTarget, readingGallery)"
-      />
-
-      <MobileSearchDialog
-        v-if="compactSearch && searchOpen"
-        :query="search"
-        :complete-tags="adapter.completeTags"
-        @close="closeSearch"
-        @load-tags="loadTags"
-        @search="submitSearch"
-      />
+      >
+        <GallerySearchPanel
+          v-if="searchOpen"
+          :query="search"
+          :desktop="!compactSearch"
+          :complete-tags="adapter.completeTags"
+          @close="closeSearch"
+          @load-tags="loadTags"
+          @search="submitSearch"
+        />
+      </AppHeader>
 
       <aside v-if="navigationItems.length" v-show="chromeVisible" class="site-sidebar">
         <SiteNavLinks :items="navigationItems" :current-url="activeUrl" @select="selectSection" />

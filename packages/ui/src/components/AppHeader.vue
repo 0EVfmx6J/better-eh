@@ -2,11 +2,9 @@
 import { ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { useTemplateRef } from 'vue'
-import type { CompleteTags } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
 import BookmarkButton from './BookmarkButton.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
-import TagSearchBox from './TagSearchBox.vue'
 
 defineProps<{
   home: string
@@ -15,7 +13,7 @@ defineProps<{
   menuOpen: boolean
   compactSearch: boolean
   searchOpen: boolean
-  completeTags?: CompleteTags
+  search: string
   wideReader: boolean
   smallReaderHeader: boolean
   isReader: boolean
@@ -34,22 +32,17 @@ const emit = defineEmits<{
   goBack: [event: MouseEvent]
   openSiteMenu: []
   openSearch: []
-  loadTags: []
-  submitSearch: []
   refresh: []
   toggleBookmark: [event: MouseEvent]
 }>()
 const preferences = usePreferencesStore()
 const { theme, readerFit } = storeToRefs(preferences)
-const search = defineModel<string>('search', { required: true })
-const searchBox = useTemplateRef('searchBox')
 const searchToggle = useTemplateRef('searchToggle')
 const brand = useTemplateRef('brand')
 const readerActionsTarget = useTemplateRef('readerActionsTarget')
 const readerToolsTarget = useTemplateRef('readerToolsTarget')
 defineExpose({
-  searchIcon: () => searchToggle.value?.querySelector('svg') ?? searchBox.value?.searchIcon(),
-  focusSearchAtEnd: () => searchBox.value?.focusAtEnd(),
+  searchIcon: () => searchToggle.value?.querySelector('svg') ?? undefined,
   focusSearchToggle: () => searchToggle.value?.focus({ preventScroll: true }),
   focusNavigation: () => (searchToggle.value ?? brand.value)?.focus({ preventScroll: true }),
 })
@@ -59,10 +52,12 @@ defineExpose({
   <header id="better-eh-masthead" class="masthead">
     <div
       class="shell header-inner"
+      :inert="!compactSearch && searchOpen"
       :class="{
         'header-with-back': back,
         'header-compact-search': compactSearch,
         'reader-header': wideReader,
+        invisible: !compactSearch && searchOpen,
       }"
     >
       <div class="header-brand">
@@ -100,7 +95,7 @@ defineExpose({
           aria-label="搜索画廊或标签"
           title="搜索画廊或标签"
           aria-haspopup="dialog"
-          :aria-controls="searchOpen ? 'better-eh-mobile-search' : undefined"
+          :aria-controls="searchOpen ? 'better-eh-gallery-search' : undefined"
           :aria-expanded="searchOpen"
           @click="emit('openSearch')"
         >
@@ -109,28 +104,19 @@ defineExpose({
         <p v-if="isReader" class="reader-header-title" :title="readerTitle">{{ readerTitle }}</p>
       </div>
       <button
-        v-if="compactSearch && !isReader && !back"
+        v-if="!compactSearch || (!isReader && !back)"
         ref="searchToggle"
         class="search-form flex min-h-11 w-full items-center gap-2.5 rounded-xl text-left"
         type="button"
         aria-label="搜索画廊或标签"
         aria-haspopup="dialog"
-        :aria-controls="searchOpen ? 'better-eh-mobile-search' : undefined"
+        :aria-controls="searchOpen ? 'better-eh-gallery-search' : undefined"
         :aria-expanded="searchOpen"
         @click="emit('openSearch')"
       >
         <Search :size="18" class="shrink-0 text-muted" aria-hidden="true" />
         <span class="truncate" :class="{ 'text-muted': !search }">{{ search || '搜索画廊或标签' }}</span>
       </button>
-      <TagSearchBox
-        v-if="!compactSearch"
-        id="header-search"
-        ref="searchBox"
-        v-model="search"
-        :complete-tags="completeTags"
-        @load="emit('loadTags')"
-        @submit="emit('submitSearch')"
-      />
       <div class="header-actions flex items-center gap-2">
         <div v-if="isReader" v-show="wideReader" ref="readerActionsTarget" class="reader-header-actions"></div>
         <Teleport :to="readerToolsTarget" :disabled="!isReader || !smallReaderHeader || !readerToolsTarget">
@@ -170,6 +156,7 @@ defineExpose({
         </Teleport>
       </div>
     </div>
+    <slot />
     <div v-if="isReader" v-show="!wideReader" class="shell reader-controls">
       <div v-show="smallReaderHeader" ref="readerToolsTarget" class="reader-controls-tools"></div>
       <Teleport :to="readerActionsTarget" :disabled="!wideReader || !readerActionsTarget">

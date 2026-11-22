@@ -88,13 +88,11 @@ export function useGallerySearch(
     const { term, trigger } = selection
     const remaining = remainingTerms.value
     const start = remaining ? undefined : flightCenter(trigger)
-    const compact = compactSearch.value
-    dismissTagSearch(compact)
+    dismissTagSearch(true)
     search.value = remaining
       ? remaining.map(({ text }) => text).join(' ')
       : [search.value.trimEnd(), term].filter(Boolean).join(' ')
     await nextTick()
-    if (!compact) header.value?.focusSearchAtEnd()
     if (start) tagFlight.fly(start, header.value?.searchIcon())
   }
 
@@ -111,11 +109,11 @@ export function useGallerySearch(
     searchOpen.value = true
   }
 
-  async function closeSearch(): Promise<void> {
+  async function closeSearch(restoreFocus = true): Promise<void> {
     if (!searchOpen.value) return
     searchOpen.value = false
     await nextTick()
-    header.value?.focusSearchToggle()
+    if (restoreFocus) header.value?.focusSearchToggle()
   }
 
   return {
