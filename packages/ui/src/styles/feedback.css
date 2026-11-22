@@ -190,7 +190,7 @@
   @apply inline-flex items-center gap-[10px] text-[12px] text-muted;
 }
 .native-frame-notice {
-  @apply fixed z-20 m-0 max-w-[calc(100%-24px)] rounded-[9px] px-3 py-2 text-[13px];
+  @apply fixed z-20 m-0 flex max-w-[calc(100%-24px)] items-center gap-2 rounded-[9px] py-2 pr-3 pl-2 text-[13px];
   inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) auto auto;
   background: #161616;
   color: #fff;
@@ -200,6 +200,11 @@
   @apply font-semibold underline underline-offset-2;
 }
 
-.native-frame-notice a:focus-visible {
+.notice-dismiss {
+  @apply grid size-9 shrink-0 place-items-center rounded-md text-xl hover:bg-current/15 active:bg-current/20;
+}
+
+.native-frame-notice a:focus-visible,
+.notice-dismiss:focus-visible {
   outline-color: currentColor;
 }

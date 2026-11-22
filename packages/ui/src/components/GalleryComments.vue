@@ -29,6 +29,7 @@ const loaded = shallowRef<GalleryComments>()
 const comments = computed(() => loaded.value ?? props.comments)
 const fetchedTotal = shallowRef<number>()
 const total = computed(() => comments.value?.total ?? fetchedTotal.value)
+const scrollItemKeys = computed(() => comments.value?.items.map((comment) => String(comment.id)))
 const loading = shallowRef(false)
 const failed = shallowRef(false)
 const refreshing = shallowRef(false)
@@ -217,6 +218,7 @@ function restoreFocus(): void {
         ref="scroll"
         class="gallery-comments-panel gallery-comments-viewport"
         :content-attrs="{ class: 'px-5 pb-[env(safe-area-inset-bottom)]' }"
+        :item-keys="scrollItemKeys"
         :refresh="refresh"
         :refresh-blocked="pullBlocked"
         :refreshing="refreshing"
@@ -267,7 +269,12 @@ function restoreFocus(): void {
         <template #default>
           <p v-if="refreshFailed" class="py-3 text-muted" role="status">刷新评论失败，可点击刷新按钮重试。</p>
           <ul v-if="comments?.items.length" role="list" class="m-0 list-none divide-y divide-solid divide-line p-0">
-            <li v-for="comment in comments.items" :key="comment.id" class="py-4 wrap-anywhere">
+            <li
+              v-for="comment in comments.items"
+              :key="comment.id"
+              class="py-4 wrap-anywhere"
+              :data-scroll-item="comment.id"
+            >
               <div class="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
                 <span class="font-semibold">{{ comment.author || '未知作者' }}</span>
                 <span v-if="comment.posted" class="text-[12px] text-muted">{{ comment.posted }}</span>

@@ -183,6 +183,7 @@ function toggleAll(): void {
           class="gallery-card"
           :class="{ 'is-selected': selecting && selectedHrefs.has(item.href) }"
           :data-gallery-href="item.href"
+          :data-scroll-item="group.id === 'main' ? item.href : undefined"
           :aria-posinset="position"
           :aria-setsize="group.items.length"
           role="listitem"

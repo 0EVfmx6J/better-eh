@@ -30,13 +30,10 @@ const preferences = usePreferencesStore()
 const framesElement = useTemplateRef<HTMLElement>('framesElement')
 const heightProbe = useTemplateRef<HTMLElement>('heightProbe')
 const fitWidth = computed(() => preferences.readerFit === 'width')
-const { rendered, totalHeight, endSpace, focusedPage, recordImageSize, scrollToPage } = useReaderVirtualizer(
-  props,
-  framesElement,
-  heightProbe,
-  fitWidth,
-  (chapter, index) => emit('showPage', chapter, index),
-)
+const { rendered, renderedBuffer, totalHeight, endSpace, focusedPage, recordImageSize, scrollToPage } =
+  useReaderVirtualizer(props, framesElement, heightProbe, fitWidth, (chapter, index) =>
+    emit('showPage', chapter, index),
+  )
 const previewFrames = computed(() => rendered.value.map(({ frame }) => frame))
 const previewsActive = computed(() => props.active && props.trackPosition)
 const { isLoaded, previewFor, markLoaded, markFailed } = useReaderPreviews(
@@ -69,7 +66,6 @@ defineExpose({ scrollToPage })
   <div
     class="reader-surface mx-auto block w-[min(100%,1000px)] overflow-visible bg-transparent"
     :class="{ 'fit-width': fitWidth }"
-    :style="endSpace ? { paddingBottom: endSpace + 'px' } : undefined"
   >
     <div v-if="loadPreviousFailure" class="reader-previous-error infinite-error" role="status">
       <span>{{ loadPreviousFailure }}</span>
@@ -82,6 +78,15 @@ defineExpose({ scrollToPage })
       @focusout="focusedPage = undefined"
     >
       <span ref="heightProbe" class="reader-height-probe" aria-hidden="true" />
+      <div
+        v-for="{ key, top, height } in renderedBuffer"
+        :key="key"
+        class="reader-buffer absolute inset-x-0 top-0"
+        :style="{ transform: 'translateY(' + top + 'px)', height: height + 'px' }"
+        aria-hidden="true"
+      >
+        <LoadingSpinner :size="24" />
+      </div>
       <article
         v-for="{ frame, position, top, width, height, pageHeight, preview, broken, loading } in renderedPages"
         :key="frame.href"
@@ -92,6 +97,7 @@ defineExpose({ scrollToPage })
         }"
         :data-index="position"
         :data-reader-href="frame.href"
+        :data-scroll-item="frame.href"
         :data-reader-chapter="frame.chapter"
         :data-reader-index="frame.index"
         @focusin="focusedPage = frame.href"
@@ -151,5 +157,6 @@ defineExpose({ scrollToPage })
         >
       </article>
     </div>
+    <div v-if="endSpace" :style="{ height: endSpace + 'px' }" aria-hidden="true" />
   </div>
 </template>

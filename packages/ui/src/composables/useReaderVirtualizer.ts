@@ -6,9 +6,11 @@ import { afterRenderedFrame } from '../utils/after-rendered-frame'
 
 export interface ReaderVirtualizerProps {
   viewport: HTMLElement | null
+  preserveEdgePosition: () => Promise<boolean>
   frames: readonly (ReaderFrame & { chapter: number })[]
   pagesAhead: number
   pagesBehind: number
+  buffer: { head: readonly string[]; tail: readonly string[] }
   scrollTop: number
   trackPosition: boolean
   returningToTop: boolean
@@ -16,12 +18,12 @@ export interface ReaderVirtualizerProps {
   loadPreviousFailure?: string
 }
 
+type ReaderSlot = { key: string; frame: ReaderVirtualizerProps['frames'][number]; position: number } | { key: string }
+
 interface ReaderResizeAnchor {
   href: string
   progress: number
 }
-
-type ReaderLayoutAnchor = ReaderResizeAnchor | { href: string; top: number }
 
 export function useReaderVirtualizer(
   props: ReaderVirtualizerProps,
@@ -36,10 +38,25 @@ export function useReaderVirtualizer(
   const endSpace = shallowRef(0)
   const focusedPage = shallowRef<string>()
   const seekingPage = shallowRef<{ href: string }>()
-  const restoringPage = shallowRef<ReaderLayoutAnchor>()
+  const restoringPage = shallowRef<ReaderResizeAnchor>()
+  const prepending = shallowRef(false)
+  let scrollWrite = 0
   let savedResize: { anchor: ReaderResizeAnchor; scrollTop: number } | undefined
   const imageSizes = shallowReactive(new Map<string, { width: number; height: number }>())
   const restoreAfterResize = useDebounceFn(restorePosition, 80)
+  // Extend the head after the first prepend, keeping the entry page at the initial position.
+  const entryPage = props.frames[0]?.href
+  const headBuffer = computed(() => (props.frames[0]?.href !== entryPage ? props.buffer.head : []))
+  const slots = computed<ReaderSlot[]>(() => [
+    ...headBuffer.value.map((key) => ({ key })),
+    ...props.frames.map((frame, position) => ({ key: `${frame.chapter}:${frame.index}`, frame, position })),
+    ...props.buffer.tail.map((key) => ({ key })),
+  ])
+
+  function edgeTranslation(container: HTMLElement): number {
+    const transform = container.closest('main')?.style.transform
+    return transform ? new DOMMatrixReadOnly(transform).m42 : 0
+  }
 
   function updateGeometry(): void {
     const container = framesElement.value
@@ -50,7 +67,7 @@ export function useReaderVirtualizer(
     const width = bounds.width
     const viewportHeight = viewport.clientHeight
     const maxHeight = Number.parseFloat(getComputedStyle(probe).maxHeight) || Math.max(360, viewportHeight * 0.69)
-    const offset = bounds.top - viewport.getBoundingClientRect().top + viewport.scrollTop
+    const offset = bounds.top - viewport.getBoundingClientRect().top + viewport.scrollTop - edgeTranslation(container)
     const widthMode = fitWidth.value
     const previous = geometry.value
     const reflow =
@@ -60,12 +77,7 @@ export function useReaderVirtualizer(
       widthMode !== previous.widthMode
     const restoring = restoringPage.value
     const anchor =
-      reflow &&
-      previous.width &&
-      props.trackPosition &&
-      !props.returningToTop &&
-      !seekingPage.value &&
-      (!restoring || 'progress' in restoring)
+      reflow && previous.width && props.trackPosition && !props.returningToTop && !seekingPage.value
         ? (restoring ?? savedResize?.anchor ?? captureResizeAnchor(viewport))
         : undefined
     const request = anchor && { ...anchor }
@@ -80,7 +92,8 @@ export function useReaderVirtualizer(
     if (viewport.scrollTop <= 1) return
     const line = viewport.scrollTop + Math.floor(geometry.value.viewportHeight / 3)
     const row = virtualizer.value.getVirtualItemForOffset(line)
-    const frame = row && props.frames[row.index]
+    const slot = row && slots.value[row.index]
+    const frame = slot && 'frame' in slot ? slot.frame : undefined
     if (row && frame) return { href: frame.href, progress: Math.max(0, Math.min(1, (line - row.start) / row.size)) }
   }
 
@@ -113,7 +126,7 @@ export function useReaderVirtualizer(
   const rangeExtractor = computed(() => {
     const retained = [focusedPage.value, (seekingPage.value ?? restoringPage.value)?.href]
       .filter(Boolean)
-      .map((href) => props.frames.findIndex((frame) => frame.href === href))
+      .map((href) => slots.value.findIndex((slot) => 'frame' in slot && slot.frame.href === href))
     return ({ startIndex, endIndex, count }: Range) => {
       const start = Math.max(0, startIndex - props.pagesBehind)
       const end = Math.min(count - 1, endIndex + props.pagesAhead)
@@ -127,16 +140,19 @@ export function useReaderVirtualizer(
 
   const virtualizer = useVirtualizer<HTMLElement, HTMLElement>(
     computed(() => {
-      const frames = props.frames
-      const { width, maxHeight, offset, widthMode } = geometry.value
+      const rows = slots.value
+      const { width, maxHeight, offset, widthMode, viewportHeight } = geometry.value
       return {
-        count: frames.length,
+        count: rows.length,
         enabled: width > 0,
+        anchorTo: prepending.value ? 'end' : 'start',
         getScrollElement: () => props.viewport,
-        getItemKey: (position: number) => frames[position]?.href ?? position,
+        getItemKey: (position: number) => rows[position]?.key ?? position,
         estimateSize: (position: number) => {
-          const frame = frames[position]
-          return frame ? estimateHeight(frame, width, maxHeight, widthMode) : minHeight
+          const row = rows[position]
+          return row && 'frame' in row
+            ? estimateHeight(row.frame, width, maxHeight, widthMode)
+            : Math.max(minHeight, maxHeight / 2, viewportHeight / 2)
         },
         gap,
         paddingEnd: gap,
@@ -144,9 +160,17 @@ export function useReaderVirtualizer(
         scrollToFn(offset, options, instance) {
           const viewport = instance.scrollElement
           if (!viewport) return
-          const before = viewport.scrollTop
-          elementScroll(offset, options, instance)
-          if (savedResize && Math.abs(before - savedResize.scrollTop) <= 1) savedResize.scrollTop = viewport.scrollTop
+          const write = ++scrollWrite
+          const apply = () => {
+            if (write !== scrollWrite || props.viewport !== viewport) return
+            const before = viewport.scrollTop
+            elementScroll(offset, options, instance)
+            if (savedResize && Math.abs(before - savedResize.scrollTop) <= 1) savedResize.scrollTop = viewport.scrollTop
+          }
+          // Let Vue commit the new virtual positions before writing their scroll offset.
+          if (options.behavior === undefined || options.adjustments !== undefined) {
+            queueMicrotask(() => void nextTick(apply))
+          } else apply()
         },
         rangeExtractor: rangeExtractor.value,
         useAnimationFrameWithResizeObserver: true,
@@ -154,17 +178,41 @@ export function useReaderVirtualizer(
     }),
   )
 
+  watch(
+    () => slots.value[0]?.key,
+    (first, previous) => {
+      if (!previous || !first || !slots.value.some((slot) => slot.key === previous)) return
+      const viewport = props.viewport
+      const container = framesElement.value
+      const main = container?.closest('main')
+      if (viewport && container && main) {
+        // Keep short last pages anchored by reserving the unused viewport space before insertion.
+        const bottom =
+          container.getBoundingClientRect().bottom -
+          edgeTranslation(container) +
+          endSpace.value +
+          parseFloat(getComputedStyle(main).paddingBottom)
+        const unused = viewport.getBoundingClientRect().bottom - bottom
+        if (unused > 0) endSpace.value += Math.ceil(unused)
+      }
+      prepending.value = true
+      void nextTick(() => (prepending.value = false))
+    },
+    { flush: 'sync' },
+  )
+
   const totalHeight = computed(() => virtualizer.value.getTotalSize())
   const rendered = computed(() => {
     const { offset } = geometry.value
     return virtualizer.value.getVirtualItems().flatMap((item) => {
-      const frame = props.frames[item.index]
-      if (!frame) return []
+      const slot = slots.value[item.index]
+      if (!slot || !('frame' in slot)) return []
+      const { frame, position } = slot
       const size = dimensions(frame)
       return [
         {
           frame,
-          position: item.index,
+          position,
           top: item.start - offset,
           width: size.width,
           height: size.height,
@@ -174,6 +222,13 @@ export function useReaderVirtualizer(
       ]
     })
   })
+  const renderedBuffer = computed(() =>
+    virtualizer.value.getVirtualItems().flatMap((item) => {
+      const slot = slots.value[item.index]
+      if (!slot || 'frame' in slot) return []
+      return [{ key: slot.key, top: item.start - geometry.value.offset, height: item.size }]
+    }),
+  )
 
   watch(
     [() => props.returningToTop, seekingPage, restoringPage],
@@ -183,28 +238,6 @@ export function useReaderVirtualizer(
         returning || seeking || restoring ? () => false : undefined
     },
     { immediate: true, flush: 'sync' },
-  )
-
-  watch(
-    () => props.frames[0]?.href,
-    (_, previous) => {
-      const viewport = props.viewport
-      const container = framesElement.value
-      if (!previous || !viewport || !container || !props.trackPosition || seekingPage.value || restoringPage.value)
-        return
-      if (!props.frames.some((frame) => frame.href === previous)) return
-
-      // The old frames are still in the DOM before Vue patches the prepended pages.
-      const viewportTop = viewport.getBoundingClientRect().top
-      const firstVisible = Array.from(container.querySelectorAll<HTMLElement>('[data-reader-href]')).find(
-        (element) => element.getBoundingClientRect().bottom > viewportTop,
-      )
-      const href = firstVisible?.dataset.readerHref
-      if (!firstVisible || !href) return
-      const request = { href, top: firstVisible.getBoundingClientRect().top - viewportTop }
-      restoringPage.value = request
-      void restorePosition(viewport, container, request)
-    },
   )
 
   watch([framesElement, () => props.viewport, () => props.loadPreviousFailure, fitWidth], updateGeometry, {
@@ -219,6 +252,7 @@ export function useReaderVirtualizer(
     },
   )
   onScopeDispose(() => {
+    scrollWrite += 1
     cancelAnimationFrame(resizeFrame)
     restoringPage.value = undefined
   })
@@ -238,7 +272,8 @@ export function useReaderVirtualizer(
       const line = Math.floor(viewport.clientHeight / 3) + viewport.scrollTop
       const items = virtualizer.value.getVirtualItems()
       const item = items.find(({ start, end }) => end > line && start < line + 24)
-      const frame = item && props.frames[item.index]
+      const slot = item && slots.value[item.index]
+      const frame = slot && 'frame' in slot ? slot.frame : undefined
       if (frame) showPage(frame.chapter, frame.index)
     },
     { flush: 'post' },
@@ -247,21 +282,21 @@ export function useReaderVirtualizer(
   function recordImageSize(position: number, url: string, event: Event): void {
     const image = event.target
     if (!(image instanceof HTMLImageElement) || !image.naturalWidth || !image.naturalHeight) return
-    const previous = imageSizes.get(url)
-    if (previous?.width !== image.naturalWidth || previous.height !== image.naturalHeight) {
-      imageSizes.set(url, { width: image.naturalWidth, height: image.naturalHeight })
-    }
     const frame = props.frames[position]
+    if (frame?.image !== url) return
+    const previous = dimensions(frame)
+    if (previous.width === image.naturalWidth && previous.height === image.naturalHeight) return
+    void props.preserveEdgePosition()
+    imageSizes.set(url, { width: image.naturalWidth, height: image.naturalHeight })
     const { width, maxHeight, widthMode } = geometry.value
-    if (frame?.image === url) virtualizer.value.resizeItem(position, estimateHeight(frame, width, maxHeight, widthMode))
+    virtualizer.value.resizeItem(position + headBuffer.value.length, estimateHeight(frame, width, maxHeight, widthMode))
   }
 
   async function restorePosition(
     viewport: HTMLElement,
     container: HTMLElement,
-    request: ReaderLayoutAnchor,
+    request: ReaderResizeAnchor,
   ): Promise<void> {
-    // Wait for the new sizes and their offsets to be committed before using the target's position.
     await afterRenderedFrame()
     if (restoringPage.value !== request) return
     const index = props.frames.findIndex((frame) => frame.href === request.href)
@@ -269,20 +304,11 @@ export function useReaderVirtualizer(
     if (target && props.trackPosition && !props.returningToTop && !seekingPage.value) {
       const bounds = target.getBoundingClientRect()
       const offset =
-        'progress' in request
-          ? Math.floor(viewport.clientHeight / 3) -
-            Math.min(Math.max(0, bounds.height - 1), bounds.height * request.progress)
-          : request.top
+        Math.floor(viewport.clientHeight / 3) -
+        Math.min(Math.max(0, bounds.height - 1), bounds.height * request.progress)
       const top = bounds.top - viewport.getBoundingClientRect().top + viewport.scrollTop - offset
-      const extra = Math.ceil(top - (viewport.scrollHeight - viewport.clientHeight))
-      if (extra > 0 && 'top' in request) {
-        endSpace.value += extra
-        await nextTick()
-      }
-      if (restoringPage.value !== request) return
       viewport.scrollTo({ top: Math.round(top), behavior: 'instant' })
-      if ('progress' in request) savedResize = { anchor: request, scrollTop: viewport.scrollTop }
-      else if (savedResize) savedResize.scrollTop = viewport.scrollTop
+      savedResize = { anchor: request, scrollTop: viewport.scrollTop }
     }
     restoringPage.value = undefined
   }
@@ -321,5 +347,5 @@ export function useReaderVirtualizer(
     }
   }
 
-  return { rendered, totalHeight, endSpace, focusedPage, recordImageSize, scrollToPage }
+  return { rendered, renderedBuffer, totalHeight, endSpace, focusedPage, recordImageSize, scrollToPage }
 }

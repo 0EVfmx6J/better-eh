@@ -1,4 +1,11 @@
+.reader-frames,
+.reader-buffer,
 .reader-frame {
+  /* Virtual positions must change together with the scroll offset. */
+  @apply transition-none;
+}
+.reader-frame,
+.reader-buffer {
   @apply grid min-h-[180px] place-items-center overflow-hidden rounded-ui bg-panel;
 }
 .eh-app.is-reader {
@@ -34,7 +41,8 @@
   .reader-main.shell {
     padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
   }
-  .reader-frame {
+  .reader-frame,
+  .reader-buffer {
     border-radius: 0;
   }
 }

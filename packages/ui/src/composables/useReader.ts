@@ -43,6 +43,7 @@ export function useReader({
     loadMoreFailure,
     loadPreviousFailure,
     hasPrevious,
+    hasMore,
     canLoadNextPage,
     canLoadNextChapter,
   } = navigation
@@ -83,6 +84,33 @@ export function useReader({
   const activeFramePosition = computed(() =>
     readerFrames.value.findIndex((frame) => frame.chapter === readerChapter.value && frame.index === readerIndex.value),
   )
+  const scrollDirection = shallowRef<'next' | 'previous'>()
+  watch(navigation.readerRevision, () => (scrollDirection.value = undefined), { flush: 'post' })
+  watch([readerChapter, readerIndex], ([chapter, index], [previousChapter, previousIndex]) => {
+    if (chapter !== previousChapter) scrollDirection.value = chapter < previousChapter ? 'previous' : 'next'
+    else if (index !== previousIndex) scrollDirection.value = index < previousIndex ? 'previous' : 'next'
+  })
+  const readerBuffer = computed(() => {
+    const first = readerFrames.value[0]
+    const last = readerFrames.value.at(-1)
+    const chapters = readingQueue.value
+    const head: string[] = []
+    const tail: string[] = []
+    if (first && hasPrevious.value && !loadPreviousFailure.value) {
+      const chapter = first.index > 1 ? first.chapter : first.chapter - 1
+      const index = first.index > 1 ? first.index - 1 : chapters?.[chapter]?.pages || 0
+      head.push(`${chapter}:${index}`)
+      if (index > 1) head.unshift(`${chapter}:${index - 1}`)
+    }
+    if (last && hasMore.value && !loadMoreFailure.value) {
+      if (canLoadNextPage.value) {
+        const total = readerSections.value.at(-1)?.page.total
+        tail.push(`${last.chapter}:${last.index + 1}`)
+        if (!total || last.index + 2 <= total) tail.push(`${last.chapter}:${last.index + 2}`)
+      } else tail.push(`${last.chapter + 1}:1`)
+    }
+    return { head, tail }
+  })
   const readerStartsLater = computed(() => (reader.value?.frames?.[0]?.index ?? reader.value?.index ?? 1) > 1)
   const showBackToTop = computed(
     () =>
@@ -207,6 +235,7 @@ export function useReader({
       !loadMoreFailure.value &&
       ((canLoadNextPage.value && ahead < readerPagesAhead) || (canLoadNextChapter.value && ahead === 0))
 
+    if (needPrevious && needNext && scrollDirection.value) return scrollDirection.value
     if (needPrevious && (!needNext || position < ahead)) return 'previous'
     return needNext ? 'next' : undefined
   })
@@ -230,6 +259,7 @@ export function useReader({
     activeFramePosition,
     readerPagesAhead,
     readerPagesBehind,
+    readerBuffer,
     readerPreloadDirection,
     canPreloadAtBottom,
     scrollY,

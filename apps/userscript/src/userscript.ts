@@ -79,7 +79,10 @@ function install(): void {
   }
 
   function showFrameNotice(surface: HTMLElement, target: URL): void {
-    const notice = document.createElement('p')
+    const shadow = surface.shadowRoot
+    if (!shadow) return
+    const previousFocus = shadow.activeElement
+    const notice = document.createElement('div')
     notice.className = 'native-frame-notice'
     notice.setAttribute('role', 'status')
     const link = document.createElement('a')
@@ -87,10 +90,28 @@ function install(): void {
     link.target = '_blank'
     link.rel = 'noopener'
     link.textContent = '在新标签页打开原站'
-    notice.append('原站页面无法在这里载入。', link)
-    surface.shadowRoot?.append(notice)
+    const message = document.createElement('span')
+    message.append('原站页面无法在这里载入。 ', link)
+    const close = document.createElement('button')
+    close.className = 'notice-dismiss'
+    close.type = 'button'
+    close.textContent = '×'
+    close.title = '关闭原站提示'
+    close.setAttribute('aria-label', close.title)
+    close.addEventListener('click', () => {
+      notice.remove()
+      frameNotice = undefined
+      const focus =
+        previousFocus instanceof HTMLElement && previousFocus.getClientRects().length
+          ? previousFocus
+          : shadow.querySelector<HTMLElement>('.eh-app')
+      focus?.focus({ preventScroll: true })
+    })
+    notice.append(close, message)
+    frameNotice?.remove()
+    shadow.append(notice)
     frameNotice = notice
-    link.focus({ preventScroll: true })
+    close.focus({ preventScroll: true })
   }
 
   async function showEnhanced(site: SiteAdapter, page: SitePage, url: URL, animate: boolean): Promise<void> {

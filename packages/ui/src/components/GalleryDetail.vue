@@ -170,6 +170,7 @@ const galleryTagGroups = computed(() => {
       :aria-posinset="position"
       :aria-setsize="page.thumbnails.length"
       :data-gallery-href="thumb.href"
+      :data-scroll-item="thumb.href"
     >
       <a
         :href="thumb.href"

@@ -149,6 +149,7 @@ const {
   activeFramePosition,
   readerPagesAhead,
   readerPagesBehind,
+  readerBuffer,
   readerPreloadDirection,
   canPreloadAtBottom,
   scrollY,
@@ -183,6 +184,13 @@ provide(galleryViewportKey, { viewport: app, restoration: navigation.galleryRest
 const refreshBlocked = computed(() => Boolean(pending.value || savingTags.value))
 const pullRefreshBlocked = computed(() => refreshBlocked.value || hasPrevious.value || loadingPrevious.value)
 const virtual = computed(() => page.value.kind !== 'tags')
+const scrollItemKeys = computed(() => {
+  const current = page.value
+  if (current.kind === 'catalog') return current.items.map((item) => item.href)
+  if (current.kind === 'gallery') return current.thumbnails.map((item) => item.href)
+  if (current.kind === 'reader') return readerFrames.value.map((frame) => frame.href)
+  return undefined
+})
 const contentAttrs = computed(() => ({
   class: { 'shell main': true, 'reader-main': Boolean(reader.value) },
   'aria-busy': busy.value,
@@ -335,6 +343,7 @@ function goBack(event: MouseEvent) {
     class="eh-app"
     :class="{ 'has-site-nav': !reader && navigationItems.length, 'is-reader': reader }"
     :content-attrs="contentAttrs"
+    :item-keys="scrollItemKeys"
     content-as="main"
     :virtual="virtual"
     :refresh="refreshFromTop"
@@ -346,7 +355,9 @@ function goBack(event: MouseEvent) {
     :loading="loadingMore"
     :has-more="hasMore"
     :error="loadMoreFailure"
+    :previous-error="loadPreviousFailure"
     :reached-end="reachedEnd"
+    :has-previous="hasPrevious || loadingPrevious"
     :active="viewActive?.value !== false"
     :show-load-hint="page.kind !== 'reader'"
     :preload-distance="reader ? 180 : 760"
@@ -415,7 +426,7 @@ function goBack(event: MouseEvent) {
       />
     </template>
 
-    <template #[virtual?'virtual':'default']="{ viewport }">
+    <template #[virtual?'virtual':'default']="{ viewport, preserveEdgePosition }">
       <div v-if="failure && !readerSeekFailure" class="notice flex flex-wrap items-center gap-3" role="alert">
         <span class="grow">{{ failure.message }}</span>
         <button type="button" class="pill" @click="retryNavigation">重试</button>
@@ -488,6 +499,7 @@ function goBack(event: MouseEvent) {
         :title="reader?.title"
         :frames="readerFrames"
         :viewport="viewport"
+        :preserve-edge-position="preserveEdgePosition"
         :active="viewActive?.value !== false"
         :load-thumbnails="navigation.loadReaderThumbnails"
         :scroll-top="scrollY"
@@ -495,6 +507,7 @@ function goBack(event: MouseEvent) {
         :returning-to-top="returningToTop"
         :pages-ahead="readerPagesAhead"
         :pages-behind="readerPagesBehind"
+        :buffer="readerBuffer"
         :busy="busy"
         :broken-images="brokenImages"
         :image-retry-errors="imageRetryErrors"
