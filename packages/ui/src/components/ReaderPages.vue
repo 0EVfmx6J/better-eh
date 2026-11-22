@@ -4,6 +4,7 @@ import type { ReaderFrame, Thumbnail } from '@better-eh/core'
 import { useReaderPreviews } from '../composables/useReaderPreviews'
 import { useReaderVirtualizer, type ReaderVirtualizerProps } from '../composables/useReaderVirtualizer'
 import { usePreferencesStore } from '../stores/preferences'
+import LoadingSpinner from './LoadingSpinner.vue'
 import ThumbnailTile from './ThumbnailTile.vue'
 
 const props = defineProps<
@@ -38,8 +39,19 @@ const { rendered, totalHeight, endSpace, focusedPage, recordImageSize, scrollToP
 )
 const previewFrames = computed(() => rendered.value.map(({ frame }) => frame))
 const previewsActive = computed(() => props.active && props.trackPosition)
-const { previewFor, markLoaded, markFailed } = useReaderPreviews(previewFrames, previewsActive, props.loadThumbnails)
-const renderedPages = computed(() => rendered.value.map((page) => ({ ...page, preview: previewFor(page.frame) })))
+const { isLoaded, previewFor, markLoaded, markFailed } = useReaderPreviews(
+  previewFrames,
+  previewsActive,
+  props.loadThumbnails,
+)
+const renderedPages = computed(() =>
+  rendered.value.map((page) => {
+    const { frame } = page
+    const broken = props.brokenImages.has(frame.href)
+    const loading = props.retryingImages.has(frame.href) || (!broken && !isLoaded(frame))
+    return { ...page, broken, loading, preview: previewFor(frame) }
+  }),
+)
 
 function imageLoaded(frame: ReaderFrame & { chapter: number }, position: number, event: Event): void {
   const image = event.currentTarget
@@ -71,7 +83,7 @@ defineExpose({ scrollToPage })
     >
       <span ref="heightProbe" class="reader-height-probe" aria-hidden="true" />
       <article
-        v-for="{ frame, position, top, width, height, pageHeight, preview } in renderedPages"
+        v-for="{ frame, position, top, width, height, pageHeight, preview, broken, loading } in renderedPages"
         :key="frame.href"
         class="reader-frame absolute inset-x-0 top-0"
         :style="{
@@ -92,7 +104,7 @@ defineExpose({ scrollToPage })
           aria-hidden="true"
         />
         <img
-          v-if="!brokenImages.has(frame.href)"
+          v-if="!broken"
           :key="frame.image"
           class="reader-page-image relative"
           :src="frame.image"
@@ -115,34 +127,23 @@ defineExpose({ scrollToPage })
             }
           "
         />
-        <div v-else class="empty frame-error relative mx-4 mt-4 self-start">
-          <p role="status">
-            {{
-              retryingImages.has(frame.href)
-                ? '正在重新加载图片…'
-                : (imageRetryErrors.get(frame.href) ?? '图片加载失败。')
-            }}
-          </p>
+        <div v-else-if="!loading" class="empty frame-error relative mx-4 mt-4 self-start">
+          <p role="status">{{ imageRetryErrors.get(frame.href) ?? '图片加载失败。' }}</p>
           <div class="flex flex-wrap gap-x-2">
-            <button
-              class="pill"
-              type="button"
-              :disabled="retryingImages.has(frame.href)"
-              @click="emit('retryImage', frame)"
-            >
-              重试图片
-            </button>
-            <button
-              v-if="frame.originalHref"
-              class="pill"
-              type="button"
-              :disabled="retryingImages.has(frame.href)"
-              @click="emit('loadOriginalImage', frame)"
-            >
+            <button class="pill" type="button" @click="emit('retryImage', frame)">重试图片</button>
+            <button v-if="frame.originalHref" class="pill" type="button" @click="emit('loadOriginalImage', frame)">
               加载原图
             </button>
             <a v-if="nativeLink" class="pill" :href="nativeLink(frame.href)">打开原站</a>
           </div>
+        </div>
+        <div
+          v-if="active && loading"
+          class="pointer-events-none absolute top-2.5 right-2.5 grid size-8 place-items-center rounded-full bg-surface text-ink shadow-sm"
+          role="status"
+        >
+          <LoadingSpinner :size="20" aria-hidden="true" />
+          <span class="sr-only">正在加载第 {{ frame.index }} 页图片</span>
         </div>
         <span
           class="reader-page-label absolute right-2.5 bottom-2.5 rounded-md bg-[#101010d9] px-[7px] py-[3px] text-[11px] text-white tabular-nums"

@@ -17,8 +17,12 @@ export function useReaderPreviews(
   let request: AbortController | undefined
   const { start: schedule, stop } = useTimeoutFn(loadNext, 120, { immediate: false })
 
+  function isLoaded(frame: PreviewFrame): boolean {
+    return loadedImages.get(frame.href) === frame.image
+  }
+
   function previewFor(frame: PreviewFrame): Thumbnail | undefined {
-    if (loadedImages.get(frame.href) === frame.image) return undefined
+    if (isLoaded(frame)) return undefined
     return previews.get(frame.chapter)?.get(frame.index)
   }
 
@@ -34,10 +38,7 @@ export function useReaderPreviews(
   async function loadNext(): Promise<void> {
     if (!visible.value || request) return
     const frame = frames.value.find(
-      (frame) =>
-        loadedImages.get(frame.href) !== frame.image &&
-        !previews.get(frame.chapter)?.has(frame.index) &&
-        !attempted.has(frame.href),
+      (frame) => !isLoaded(frame) && !previews.get(frame.chapter)?.has(frame.index) && !attempted.has(frame.href),
     )
     if (!frame) return
 
@@ -82,5 +83,5 @@ export function useReaderPreviews(
   )
   onScopeDispose(cancel)
 
-  return { previewFor, markLoaded, markFailed }
+  return { isLoaded, previewFor, markLoaded, markFailed }
 }
