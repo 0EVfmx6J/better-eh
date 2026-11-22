@@ -1,4 +1,4 @@
-import { nextTick, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
+import { computed, nextTick, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { searchTokens, type GalleryTag, type SiteAdapter } from '@better-eh/core'
 import type AppHeader from '../components/AppHeader.vue'
 import { useSearchHistoryStore } from '../stores/search-history'
@@ -21,6 +21,14 @@ export function useGallerySearch(
 
   const search = shallowRef(page.value.kind === 'catalog' ? page.value.query : '')
   const tagSearch = shallowRef<{ tag: GalleryTag; trigger: HTMLElement; href: string; term: string }>()
+  const remainingTerms = computed(() => {
+    const selected = tagSearch.value?.term.toLowerCase()
+    if (!selected) return undefined
+    const terms = searchTokens(search.value)
+    const remaining = terms.filter(({ text }) => text.toLowerCase() !== selected)
+    if (remaining.length !== terms.length) return remaining
+  })
+  const tagInSearch = computed(() => remainingTerms.value !== undefined)
   const tags = useTagDirectoryStore()
   const { remember } = useSearchHistoryStore()
 
@@ -74,19 +82,17 @@ export function useGallerySearch(
     if (restoreFocus) trigger?.focus({ preventScroll: true })
   }
 
-  async function addTagToSearch(): Promise<void> {
+  async function toggleTagInSearch(): Promise<void> {
     const selection = tagSearch.value
     if (!selection) return
     const { term, trigger } = selection
-    const query = search.value.trimEnd()
-    const normalizedTerm = term.toLowerCase()
-    const added = !searchTokens(query.toLowerCase()).some((token) => token.text === normalizedTerm)
-    const start = added ? flightCenter(trigger) : undefined
+    const remaining = remainingTerms.value
+    const start = remaining ? undefined : flightCenter(trigger)
     const compact = compactSearch.value
     dismissTagSearch(compact)
-    if (added) {
-      search.value = query ? query + ' ' + term : term
-    }
+    search.value = remaining
+      ? remaining.map(({ text }) => text).join(' ')
+      : [search.value.trimEnd(), term].filter(Boolean).join(' ')
     await nextTick()
     if (!compact) header.value?.focusSearchAtEnd()
     if (start) tagFlight.fly(start, header.value?.searchIcon())
@@ -116,11 +122,12 @@ export function useGallerySearch(
     search,
     searchOpen,
     tagSearch,
+    tagInSearch,
     loadTags,
     submitSearch,
     openTagSearch,
     dismissTagSearch,
-    addTagToSearch,
+    toggleTagInSearch,
     runTagSearch,
     openSearch,
     closeSearch,

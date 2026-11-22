@@ -129,11 +129,12 @@ const {
   search,
   searchOpen,
   tagSearch,
+  tagInSearch,
   loadTags,
   submitSearch,
   openTagSearch,
   dismissTagSearch,
-  addTagToSearch,
+  toggleTagInSearch,
   runTagSearch,
   openSearch,
   closeSearch,
@@ -550,7 +551,8 @@ function goBack(event: MouseEvent) {
         :anchor="tagSearch.trigger"
         :label="(tagSearch.tag.key && tags.translate?.(tagSearch.tag.key)) || tagSearch.tag.label"
         :href="tagSearch.href"
-        @add="addTagToSearch"
+        :in-search="tagInSearch"
+        @toggle="toggleTagInSearch"
         @search="runTagSearch"
         @dismiss="dismissTagSearch"
       />

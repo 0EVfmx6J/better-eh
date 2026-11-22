@@ -3,10 +3,10 @@ import { onClickOutside, useEventListener, useResizeObserver } from '@vueuse/cor
 import { onMounted, toRef, useTemplateRef } from 'vue'
 import ActionButton from './ActionButton.vue'
 
-const props = defineProps<{ anchor: HTMLElement; label: string; href: string }>()
-const emit = defineEmits<{ add: []; search: [event: MouseEvent]; dismiss: [restoreFocus: boolean] }>()
+const props = defineProps<{ anchor: HTMLElement; label: string; href: string; inSearch: boolean }>()
+const emit = defineEmits<{ toggle: []; search: [event: MouseEvent]; dismiss: [restoreFocus: boolean] }>()
 const panel = useTemplateRef('panel')
-const addButton = useTemplateRef('addButton')
+const toggleButton = useTemplateRef('toggleButton')
 
 function place(): boolean {
   const popup = panel.value
@@ -35,7 +35,7 @@ function onFocusout(event: FocusEvent): void {
 }
 
 onMounted(() => {
-  if (place()) addButton.value?.focus({ preventScroll: true })
+  if (place()) toggleButton.value?.focus({ preventScroll: true })
 })
 onClickOutside(panel, () => emit('dismiss', false), { ignore: [toRef(props, 'anchor')] })
 useEventListener(() => props.anchor.closest('.eh-app'), 'scroll', place, { passive: true })
@@ -55,7 +55,15 @@ useResizeObserver(panel, place)
   >
     <p id="gallery-tag-search-label">{{ label }}</p>
     <div class="tag-search-popover-actions flex flex-wrap gap-2" @mousedown.prevent>
-      <button ref="addButton" class="pill action-button" type="button" @click="emit('add')">添加到搜索框</button>
+      <button
+        ref="toggleButton"
+        class="pill action-button"
+        :class="{ 'action-button-danger-subtle': inSearch }"
+        type="button"
+        @click="emit('toggle')"
+      >
+        {{ inSearch ? '从搜索框移除' : '添加到搜索框' }}
+      </button>
       <ActionButton variant="primary" :href="href" @click="emit('search', $event)">直接搜索</ActionButton>
     </div>
   </div>
