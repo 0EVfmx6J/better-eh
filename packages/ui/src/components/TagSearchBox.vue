@@ -1,24 +1,27 @@
 <script setup lang="ts">
-import { History, Search, X } from '@lucide/vue'
+import { History, Plus, Search, X } from '@lucide/vue'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, shallowRef, useId, useTemplateRef, watch } from 'vue'
 import type { CompleteTags, TagCompletion } from '@better-eh/core'
 import { useSearchHistoryStore } from '../stores/search-history'
 import { useTagDirectoryStore } from '../stores/tag-directory'
+import ConfirmationDialog from './ConfirmationDialog.vue'
 
 const { directory, loading, failed } = storeToRefs(useTagDirectoryStore())
 const searchHistory = useSearchHistoryStore()
 const { recent } = storeToRefs(searchHistory)
-const props = defineProps<{ completeTags?: CompleteTags }>()
-const emit = defineEmits<{ submit: []; load: [] }>()
+const props = defineProps<{ completeTags?: CompleteTags; expanded?: boolean; placeholder?: string }>()
+const emit = defineEmits<{ submit: []; load: []; addTag: [query: string]; selectHistory: [query: string] }>()
 const query = defineModel<string>({ required: true })
 const control = useTemplateRef('control')
+const searchButton = useTemplateRef('searchButton')
 const list = useTemplateRef('list')
 const listId = useId()
 const focused = shallowRef(false)
 const composing = shallowRef(false)
 const dismissed = shallowRef(false)
 const edited = shallowRef(false)
+const confirmClearHistory = shallowRef(false)
 const caret = shallowRef(0)
 const activeIndex = shallowRef(-1)
 const remoteOptions = shallowRef<TagCompletion[]>([])
@@ -26,11 +29,13 @@ const remotePending = shallowRef(false)
 defineExpose({
   focus: () => control.value?.focus({ preventScroll: true }),
   focusAtEnd,
+  searchIcon: () => searchButton.value?.querySelector('svg') ?? undefined,
 })
 const canSuggest = computed(() => focused.value && !composing.value && !dismissed.value)
 const historyOptions = computed(() => {
-  if (!canSuggest.value) return []
   const term = query.value.trim()
+  if (props.expanded) return !term && !composing.value && !dismissed.value ? recent.value : []
+  if (!canSuggest.value) return []
   return !term || (!edited.value && recent.value.includes(term)) ? recent.value : []
 })
 const localOptions = computed(() =>
@@ -134,18 +139,32 @@ function clearSearch(): void {
   reopenOptions()
 }
 
-function clearHistory(): void {
-  searchHistory.clear()
+async function closeClearHistory(): Promise<void> {
+  confirmClearHistory.value = false
+  await nextTick()
   control.value?.focus({ preventScroll: true })
-  dismissed.value = true
+}
+
+async function clearHistory(): Promise<void> {
+  searchHistory.clear()
+  await closeClearHistory()
+  if (!props.expanded) dismissed.value = true
 }
 
 function selectHistory(term: string): void {
+  if (props.expanded) {
+    emit('selectHistory', term)
+    return
+  }
   query.value = term
   submit()
 }
 
 async function selectTag(option: TagCompletion): Promise<void> {
+  if (props.expanded) {
+    emit('addTag', option.query)
+    return
+  }
   control.value?.focus()
   query.value = option.query
   caret.value = option.caret
@@ -157,7 +176,8 @@ async function selectTag(option: TagCompletion): Promise<void> {
 function onKeydown(event: KeyboardEvent): void {
   if (composing.value || event.isComposing) return
   const count = optionCount.value
-  if (event.key === 'Escape' && (count || remotePending.value)) {
+  const canDismiss = remotePending.value || suggestions.value.length || (!props.expanded && count)
+  if (event.key === 'Escape' && canDismiss) {
     event.preventDefault()
     dismissed.value = true
   } else if (count && (event.key === 'ArrowDown' || event.key === 'ArrowUp')) {
@@ -183,6 +203,10 @@ function onKeydown(event: KeyboardEvent): void {
 
 function submit(): void {
   if (composing.value) return
+  if (props.expanded) {
+    if (query.value.trim()) emit('submit')
+    return
+  }
   dismissed.value = true
   control.value?.blur()
   emit('submit')
@@ -190,44 +214,74 @@ function submit(): void {
 </script>
 
 <template>
-  <form class="search-box flex items-center" role="search" @focusout="onBlur" @submit.prevent="submit">
-    <input
-      ref="control"
-      v-model="query"
-      type="search"
-      role="combobox"
-      placeholder="搜索画廊或标签"
-      aria-label="搜索画廊或标签"
-      aria-autocomplete="list"
-      :aria-expanded="optionCount > 0"
-      :aria-controls="optionCount ? listId : undefined"
-      :aria-activedescendant="activeId"
-      autocomplete="off"
-      enterkeyhint="search"
-      @focus="onFocus"
-      @input="edit"
-      @click="reopenOptions"
-      @select="readCaret"
-      @keyup="readCaret"
-      @keydown="onKeydown"
-      @compositionstart="composing = true"
-      @compositionend="composing = false"
-    />
-    <button
-      v-if="query"
-      type="button"
-      class="icon-button search-clear"
-      aria-label="清除搜索内容"
-      title="清除搜索内容"
-      @click="clearSearch"
-    >
-      <X :size="16" aria-hidden="true" />
-    </button>
-    <button type="submit" class="icon-button" aria-label="搜索"><Search :size="18" aria-hidden="true" /></button>
+  <form
+    class="search-form relative min-w-0"
+    :class="{ 'search-form-expanded': expanded }"
+    role="search"
+    @focusout="onBlur"
+    @submit.prevent="submit"
+  >
+    <div class="search-box flex items-center">
+      <input
+        ref="control"
+        v-model="query"
+        type="search"
+        role="combobox"
+        :placeholder="placeholder ?? '搜索画廊或标签'"
+        aria-label="搜索画廊或标签"
+        aria-autocomplete="list"
+        :aria-expanded="optionCount > 0"
+        :aria-controls="optionCount ? listId : undefined"
+        :aria-activedescendant="activeId"
+        :autofocus="expanded"
+        autocomplete="off"
+        :enterkeyhint="expanded ? 'enter' : 'search'"
+        @focus="onFocus"
+        @input="edit"
+        @click="reopenOptions"
+        @select="readCaret"
+        @keyup="readCaret"
+        @keydown="onKeydown"
+        @compositionstart="composing = true"
+        @compositionend="composing = false"
+      />
+      <button
+        v-if="query"
+        type="button"
+        class="icon-button search-clear"
+        aria-label="清除搜索内容"
+        title="清除搜索内容"
+        @click="clearSearch"
+      >
+        <X :size="16" aria-hidden="true" />
+      </button>
+      <button v-if="!expanded" ref="searchButton" type="submit" class="icon-button" aria-label="搜索">
+        <Search :size="18" aria-hidden="true" />
+      </button>
+      <button
+        v-else
+        type="submit"
+        class="icon-button"
+        aria-label="添加条件"
+        title="添加条件"
+        :disabled="!query.trim()"
+        @mousedown.prevent
+      >
+        <Plus :size="20" aria-hidden="true" />
+      </button>
+    </div>
+    <slot />
     <div v-if="historyOptions.length" class="tag-suggestions">
       <div class="flex items-center justify-between gap-2 px-2.5 text-xs text-muted">
         <span>最近搜索</span>
-        <button type="button" class="min-h-9 rounded-md px-2 hover:bg-panel" @mousedown.prevent @click="clearHistory">
+        <button
+          type="button"
+          class="rounded-md px-2 hover:bg-panel"
+          :class="expanded ? 'min-h-11' : 'min-h-9'"
+          aria-haspopup="dialog"
+          @mousedown.prevent
+          @click="confirmClearHistory = true"
+        >
           清空历史
         </button>
       </div>
@@ -273,5 +327,16 @@ function submit(): void {
       <p role="status">{{ loading ? '正在加载标签词库…' : '标签词库加载失败' }}</p>
       <button v-if="failed && !loading" class="pill" type="button" @mousedown.prevent @click="retryTags">重试</button>
     </div>
+    <p v-else-if="expanded && !query.trim() && !recent.length" class="px-2.5 pt-5 text-muted">还没有搜索记录</p>
+    <ConfirmationDialog
+      v-if="confirmClearHistory"
+      title="清空搜索历史？"
+      message="将删除所有最近的搜索记录。"
+      confirm-label="清空"
+      :busy="false"
+      error=""
+      @cancel="closeClearHistory"
+      @confirm="clearHistory"
+    />
   </form>
 </template>

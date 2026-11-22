@@ -10,8 +10,6 @@ interface ReaderOptions {
   app: Readonly<Ref<HTMLElement | null>>
   navigation: ReturnType<typeof useNavigation>
   desktopNavigation: Readonly<Ref<boolean>>
-  compactSearch: Readonly<Ref<boolean>>
-  searchOpen: Ref<boolean>
   reducedMotion: Readonly<Ref<boolean>>
   viewActive?: Readonly<Ref<boolean>>
   focusNavigation: () => void
@@ -21,8 +19,6 @@ export function useReader({
   app,
   navigation,
   desktopNavigation,
-  compactSearch,
-  searchOpen,
   reducedMotion,
   viewActive,
   focusNavigation,
@@ -149,15 +145,8 @@ export function useReader({
   }
 
   function toggleReaderChrome(): void {
-    if (compactSearch.value && searchOpen.value) {
-      searchOpen.value = false
-      return
-    }
     readerChrome.value = !readerChrome.value
-    if (!readerChrome.value) {
-      searchOpen.value = false
-      chaptersOpen.value = false
-    }
+    if (!readerChrome.value) chaptersOpen.value = false
   }
 
   async function selectReaderChapter(chapter: number): Promise<boolean> {

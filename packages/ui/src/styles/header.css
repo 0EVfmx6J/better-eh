@@ -24,6 +24,9 @@
   @apply relative;
   grid-template-columns: minmax(0, 1fr) auto;
 }
+.header-inner.header-compact-search:has(> .search-form) {
+  @apply gap-y-2 py-2;
+}
 .header-actions {
   @apply justify-self-end;
   --header-tools-gap: 8px;
@@ -48,13 +51,8 @@
   @apply relative min-w-0 rounded-xl bg-panel;
   padding: 0 5px 0 14px;
 }
-.header-compact-search .search-box {
-  @apply absolute;
-  inset: calc(100% + 6px) max(14px, env(safe-area-inset-right)) auto max(14px, env(safe-area-inset-left));
-  grid-area: auto;
-  border: 1px solid var(--line);
-  @apply bg-surface;
-  box-shadow: 0 6px 24px #0002;
+.header-compact-search > button.search-form {
+  @apply col-span-full row-start-2 bg-panel px-3.5 active:bg-line;
 }
 .search-box:has(> input:focus) {
   outline: 1px solid var(--muted);
@@ -121,6 +119,15 @@
 }
 .tag-suggestion-status button {
   @apply min-h-[36px];
+}
+.search-form-expanded .tag-suggestions {
+  @apply static mt-3 max-h-none overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none;
+}
+.search-form-expanded .tag-suggestions [role='option'] {
+  @apply min-h-12;
+}
+.search-condition {
+  @apply border border-line bg-panel px-3 active:bg-line;
 }
 .icon-button {
   @apply inline-grid h-[44px] w-[44px] flex-none place-items-center rounded-[9px];
@@ -303,7 +310,7 @@
     grid-template-columns: 1fr auto;
     @apply gap-[5px] py-[8px];
   }
-  .search-box {
+  .header-inner > .search-form {
     grid-area: 2 / 1 / 3 / 3;
   }
 }

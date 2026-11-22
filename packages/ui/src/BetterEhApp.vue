@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bookmark, Check, Menu, X } from '@lucide/vue'
+import { Bookmark, Check, Menu, Tag, X } from '@lucide/vue'
 import { useMediaQuery, usePreferredReducedMotion } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, provide, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
@@ -12,6 +12,7 @@ import GalleryActionSheet from './components/GalleryActionSheet.vue'
 import GalleryDetail from './components/GalleryDetail.vue'
 import InfiniteScroll from './components/InfiniteScroll.vue'
 import LoadingSpinner from './components/LoadingSpinner.vue'
+import MobileSearchDialog from './components/MobileSearchDialog.vue'
 import PageLinks from './components/PageLinks.vue'
 import ReaderPages from './components/ReaderPages.vue'
 import ReaderProgress from './components/ReaderProgress.vue'
@@ -88,10 +89,7 @@ const { readLibrary } = readingLibrary
 const tags = useTagDirectoryStore()
 const motion = usePreferredReducedMotion()
 const reducedMotion = computed(() => motion.value === 'reduce')
-const mobileHeader = useMediaQuery('(max-width: 650px), (max-width: 959px) and (pointer: coarse)')
-const compactSearch = computed(
-  () => mobileHeader.value && (page.value.kind === 'gallery' || page.value.kind === 'reader'),
-)
+const compactSearch = computed(() => !desktopNavigation.value)
 const busy = computed(() => Boolean(pending.value || loadingMore.value || loadingPrevious.value))
 const wideReader = computed(() => Boolean(reader.value && desktopNavigation.value))
 const smallReaderHeader = useMediaQuery('(max-width: 480px)')
@@ -137,9 +135,9 @@ const {
   dismissTagSearch,
   addTagToSearch,
   runTagSearch,
-  toggleSearch,
+  openSearch,
   closeSearch,
-} = useGallerySearch(props.adapter, navigation, header, compactSearch, activate)
+} = useGallerySearch(props.adapter, navigation, header, compactSearch, reducedMotion, activate)
 const {
   readerChrome,
   chromeVisible,
@@ -174,8 +172,6 @@ const {
   navigation,
   viewActive: props.viewActive,
   desktopNavigation,
-  compactSearch,
-  searchOpen,
   reducedMotion,
   focusNavigation: () => header.value?.focusNavigation(),
 })
@@ -338,7 +334,7 @@ function goBack(event: MouseEvent) {
     content-as="main"
     :virtual="virtual"
     :refresh="refreshFromTop"
-    :refresh-blocked="pullRefreshBlocked || (page.kind === 'library' && loadingLibrary)"
+    :refresh-blocked="searchOpen || pullRefreshBlocked || (page.kind === 'library' && loadingLibrary)"
     :refreshing="refreshing || (page.kind === 'library' && loadingLibrary)"
     :load-more="loadMore"
     :retry-load-more="retryLoadMore"
@@ -365,7 +361,7 @@ function goBack(event: MouseEvent) {
         v-show="chromeVisible"
         ref="header"
         v-model:search="search"
-        v-model:search-open="searchOpen"
+        :search-open="searchOpen"
         :home="home"
         :back="back"
         :has-navigation="navigationItems.length > 0"
@@ -387,12 +383,20 @@ function goBack(event: MouseEvent) {
         @navigate="activate"
         @go-back="goBack"
         @open-site-menu="openSiteMenu"
-        @toggle-search="toggleSearch"
-        @close-search="closeSearch"
+        @open-search="openSearch()"
         @load-tags="loadTags"
         @submit-search="submitSearch"
         @refresh="refreshPage"
         @toggle-bookmark="toggleReadLater($event.currentTarget, readingGallery)"
+      />
+
+      <MobileSearchDialog
+        v-if="compactSearch && searchOpen"
+        :query="search"
+        :complete-tags="adapter.completeTags"
+        @close="closeSearch"
+        @load-tags="loadTags"
+        @search="submitSearch"
       />
 
       <aside v-if="navigationItems.length" v-show="chromeVisible" class="site-sidebar">
@@ -569,7 +573,8 @@ function goBack(event: MouseEvent) {
         @confirm="confirmRemoval"
         @cancel="closeRemoval"
       />
-      <span ref="bookmarkFlight" class="bookmark-flight" aria-hidden="true">
+      <span ref="tagFlight" class="icon-flight" aria-hidden="true"><Tag :size="17" /></span>
+      <span ref="bookmarkFlight" class="icon-flight" aria-hidden="true">
         <Bookmark :size="17" />
       </span>
       <Transition name="bookmark-notice">

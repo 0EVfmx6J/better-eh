@@ -1,9 +1,10 @@
-import { nextTick, shallowRef, watch, type Ref } from 'vue'
+import { nextTick, shallowRef, useTemplateRef, watch, type Ref } from 'vue'
 import { searchTokens, type GalleryTag, type SiteAdapter } from '@better-eh/core'
 import type AppHeader from '../components/AppHeader.vue'
 import { useSearchHistoryStore } from '../stores/search-history'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import { isPrimaryClick } from '../utils/is-primary-click'
+import { flightCenter, useIconFlight } from './useIconFlight'
 import type { useNavigation } from './useNavigation'
 
 export function useGallerySearch(
@@ -11,10 +12,12 @@ export function useGallerySearch(
   navigation: ReturnType<typeof useNavigation>,
   header: Readonly<Ref<InstanceType<typeof AppHeader> | null>>,
   compactSearch: Readonly<Ref<boolean>>,
+  reducedMotion: Readonly<Ref<boolean>>,
   activate: (event: MouseEvent, url: string | undefined) => void,
 ) {
   const { currentUrl, page, navigate } = navigation
   const searchOpen = shallowRef(false)
+  const tagFlight = useIconFlight(useTemplateRef('tagFlight'), reducedMotion)
 
   const search = shallowRef(page.value.kind === 'catalog' ? page.value.query : '')
   const tagSearch = shallowRef<{ tag: GalleryTag; trigger: HTMLElement; href: string; term: string }>()
@@ -22,12 +25,14 @@ export function useGallerySearch(
   const { remember } = useSearchHistoryStore()
 
   watch(currentUrl, () => {
+    tagFlight.cancel()
     searchOpen.value = false
     tagSearch.value = undefined
     if (page.value.kind === 'catalog') search.value = page.value.query
   })
 
   watch(compactSearch, () => {
+    tagFlight.cancel()
     searchOpen.value = false
   })
 
@@ -43,9 +48,10 @@ export function useGallerySearch(
     return tags.load(adapter)
   }
 
-  function submitSearch() {
+  function submitSearch(value = search.value) {
     searchOpen.value = false
-    const query = search.value.trim()
+    const query = value.trim()
+    search.value = query
     remember(query)
     void navigate(adapter.search(new URL(currentUrl.value), query))
   }
@@ -69,17 +75,21 @@ export function useGallerySearch(
   }
 
   async function addTagToSearch(): Promise<void> {
-    const term = tagSearch.value?.term
-    if (!term) return
-    dismissTagSearch(false)
+    const selection = tagSearch.value
+    if (!selection) return
+    const { term, trigger } = selection
     const query = search.value.trimEnd()
     const normalizedTerm = term.toLowerCase()
-    if (!searchTokens(query.toLowerCase()).some((token) => token.text === normalizedTerm)) {
+    const added = !searchTokens(query.toLowerCase()).some((token) => token.text === normalizedTerm)
+    const start = added ? flightCenter(trigger) : undefined
+    const compact = compactSearch.value
+    dismissTagSearch(compact)
+    if (added) {
       search.value = query ? query + ' ' + term : term
     }
-    searchOpen.value = true
     await nextTick()
-    header.value?.focusSearchAtEnd()
+    if (!compact) header.value?.focusSearchAtEnd()
+    if (start) tagFlight.fly(start, header.value?.searchIcon())
   }
 
   function runTagSearch(event: MouseEvent): void {
@@ -91,17 +101,14 @@ export function useGallerySearch(
     activate(event, selection.href)
   }
 
-  async function toggleSearch(): Promise<void> {
-    searchOpen.value = !searchOpen.value
-    if (searchOpen.value) {
-      await nextTick()
-      header.value?.focusSearch()
-    }
+  function openSearch(): void {
+    searchOpen.value = true
   }
 
-  function closeSearch(event: KeyboardEvent): void {
-    if (!searchOpen.value || event.defaultPrevented || event.isComposing) return
+  async function closeSearch(): Promise<void> {
+    if (!searchOpen.value) return
     searchOpen.value = false
+    await nextTick()
     header.value?.focusSearchToggle()
   }
 
@@ -115,7 +122,7 @@ export function useGallerySearch(
     dismissTagSearch,
     addTagToSearch,
     runTagSearch,
-    toggleSearch,
+    openSearch,
     closeSearch,
   }
 }

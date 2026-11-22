@@ -98,7 +98,7 @@
 .card-action-sheet-leave-active {
   @apply pointer-events-none;
 }
-.bookmark-flight {
+.icon-flight {
   @apply fixed z-20;
   inset: 0 auto auto 0;
   @apply grid h-[34px] w-[34px] place-items-center;

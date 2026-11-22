@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ArrowLeft, ExternalLink, LibraryBig, Menu, Moon, RefreshCw, Search, Sun } from '@lucide/vue'
-import { onClickOutside } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { useTemplateRef } from 'vue'
 import type { CompleteTags } from '@better-eh/core'
@@ -15,6 +14,7 @@ defineProps<{
   hasNavigation: boolean
   menuOpen: boolean
   compactSearch: boolean
+  searchOpen: boolean
   completeTags?: CompleteTags
   wideReader: boolean
   smallReaderHeader: boolean
@@ -33,8 +33,7 @@ const emit = defineEmits<{
   navigate: [event: MouseEvent, href: string]
   goBack: [event: MouseEvent]
   openSiteMenu: []
-  toggleSearch: []
-  closeSearch: [event: KeyboardEvent]
+  openSearch: []
   loadTags: []
   submitSearch: []
   refresh: []
@@ -43,29 +42,13 @@ const emit = defineEmits<{
 const preferences = usePreferencesStore()
 const { theme, readerFit } = storeToRefs(preferences)
 const search = defineModel<string>('search', { required: true })
-const searchOpen = defineModel<boolean>('searchOpen', { required: true })
-const masthead = useTemplateRef('masthead')
 const searchBox = useTemplateRef('searchBox')
 const searchToggle = useTemplateRef('searchToggle')
 const brand = useTemplateRef('brand')
 const readerActionsTarget = useTemplateRef('readerActionsTarget')
 const readerToolsTarget = useTemplateRef('readerToolsTarget')
-onClickOutside(
-  () => {
-    const form: unknown = searchBox.value?.$el
-    return form instanceof HTMLFormElement ? form : null
-  },
-  () => (searchOpen.value = false),
-  {
-    ignore: () => {
-      const root = masthead.value?.getRootNode()
-      return [searchToggle, root instanceof ShadowRoot ? root.getElementById('gallery-tag-search') : null]
-    },
-    capture: false,
-  },
-)
 defineExpose({
-  focusSearch: () => searchBox.value?.focus(),
+  searchIcon: () => searchToggle.value?.querySelector('svg') ?? searchBox.value?.searchIcon(),
   focusSearchAtEnd: () => searchBox.value?.focusAtEnd(),
   focusSearchToggle: () => searchToggle.value?.focus({ preventScroll: true }),
   focusNavigation: () => (searchToggle.value ?? brand.value)?.focus({ preventScroll: true }),
@@ -73,7 +56,7 @@ defineExpose({
 </script>
 
 <template>
-  <header id="better-eh-masthead" ref="masthead" class="masthead" @keydown.esc="emit('closeSearch', $event)">
+  <header id="better-eh-masthead" class="masthead">
     <div
       class="shell header-inner"
       :class="{
@@ -110,22 +93,37 @@ defineExpose({
           <ArrowLeft :size="21" aria-hidden="true" />
         </a>
         <button
-          v-if="compactSearch"
+          v-if="compactSearch && (isReader || back)"
           ref="searchToggle"
           class="icon-button"
           type="button"
           aria-label="搜索画廊或标签"
           title="搜索画廊或标签"
-          aria-controls="header-search"
+          aria-haspopup="dialog"
+          :aria-controls="searchOpen ? 'better-eh-mobile-search' : undefined"
           :aria-expanded="searchOpen"
-          @click="emit('toggleSearch')"
+          @click="emit('openSearch')"
         >
           <Search :size="20" aria-hidden="true" />
         </button>
         <p v-if="isReader" class="reader-header-title" :title="readerTitle">{{ readerTitle }}</p>
       </div>
+      <button
+        v-if="compactSearch && !isReader && !back"
+        ref="searchToggle"
+        class="search-form flex min-h-11 w-full items-center gap-2.5 rounded-xl text-left"
+        type="button"
+        aria-label="搜索画廊或标签"
+        aria-haspopup="dialog"
+        :aria-controls="searchOpen ? 'better-eh-mobile-search' : undefined"
+        :aria-expanded="searchOpen"
+        @click="emit('openSearch')"
+      >
+        <Search :size="18" class="shrink-0 text-muted" aria-hidden="true" />
+        <span class="truncate" :class="{ 'text-muted': !search }">{{ search || '搜索画廊或标签' }}</span>
+      </button>
       <TagSearchBox
-        v-show="!compactSearch || searchOpen"
+        v-if="!compactSearch"
         id="header-search"
         ref="searchBox"
         v-model="search"
