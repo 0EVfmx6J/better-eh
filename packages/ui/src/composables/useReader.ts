@@ -1,4 +1,4 @@
-import { useInfiniteScroll, useScroll, useTimeoutFn } from '@vueuse/core'
+import { useScroll, useTimeoutFn } from '@vueuse/core'
 import { computed, nextTick, onMounted, shallowRef, watch, type Ref } from 'vue'
 import { isPrimaryClick } from '../utils/is-primary-click'
 import { readerPageFrames } from '../utils/reader-frames'
@@ -46,7 +46,6 @@ export function useReader({
     loadingPrevious,
     loadMoreFailure,
     loadPreviousFailure,
-    loadMore,
     hasPrevious,
     canLoadNextPage,
     canLoadNextChapter,
@@ -223,30 +222,9 @@ export function useReader({
     return needNext ? 'next' : undefined
   })
 
-  watch(
-    readerPreloadDirection,
-    (direction) => {
-      if (direction) void loadMore(direction)
-    },
-    { immediate: true, flush: 'post' },
+  const canPreloadAtBottom = computed(
+    () => !reader.value || (canLoadNextChapter.value && !readerPreview.value && !loadingPrevious.value),
   )
-
-  useInfiniteScroll(app, () => loadMore(), {
-    distance: 760,
-    interval: 900,
-    canLoadMore: () => !reader.value && canLoadNextPage.value && !pending.value && !loadMoreFailure.value,
-  })
-
-  useInfiniteScroll(app, () => loadMore(), {
-    distance: 180,
-    interval: 900,
-    canLoadMore: () =>
-      canLoadNextChapter.value &&
-      !readerPreview.value &&
-      !pending.value &&
-      !loadingPrevious.value &&
-      !loadMoreFailure.value,
-  })
 
   onMounted(async () => {
     await nextTick()
@@ -263,6 +241,8 @@ export function useReader({
     activeFramePosition,
     readerPagesAhead,
     readerPagesBehind,
+    readerPreloadDirection,
+    canPreloadAtBottom,
     scrollY,
     brokenImages,
     imageRetryErrors,

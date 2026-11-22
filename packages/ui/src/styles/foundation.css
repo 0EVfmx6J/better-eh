@@ -49,6 +49,15 @@ svg {
   outline-offset: 3px;
 }
 
+.infinite-scroll {
+  overflow: hidden auto;
+  @apply overscroll-y-none;
+  -webkit-overflow-scrolling: touch;
+}
+.infinite-scroll.is-zoomed {
+  /* Let the visual viewport pan when the scroller reaches an edge. */
+  @apply overscroll-y-auto;
+}
 .eh-app {
   height: 100vh;
   height: 100dvh;
@@ -58,17 +67,10 @@ svg {
     system-ui,
     sans-serif;
   @apply text-left;
-  overflow: hidden auto;
-  @apply overscroll-y-contain;
-  -webkit-overflow-scrolling: touch;
   overflow-anchor: auto;
 }
 .eh-app:not(.is-reader) {
   scrollbar-gutter: stable;
-}
-.eh-app.is-zoomed {
-  /* Let the visual viewport pan when the app scroller reaches an edge. */
-  @apply overscroll-y-auto;
 }
 .stop-scroll {
   @apply overflow-y-hidden;

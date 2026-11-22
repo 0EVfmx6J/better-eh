@@ -4,19 +4,6 @@
   @apply bg-surface;
   padding-top: env(safe-area-inset-top);
 }
-.pull-refresh-reveal {
-  @apply absolute;
-  inset: 100% 0 auto;
-  @apply pointer-events-none overflow-clip;
-}
-.pull-refresh-chip {
-  @apply absolute top-1/2;
-  left: var(--pull-refresh-center, 50%);
-  transform: translate(-50%, -50%) scale(var(--pull-refresh-scale, 1));
-  @apply flex min-h-[34px] items-center gap-[8px] px-[12px];
-  border: 1px solid var(--line);
-  @apply rounded-[999px] bg-surface text-[12px] whitespace-nowrap text-ink;
-}
 .pull-refresh-chip svg {
   transition: transform 160ms ease;
 }

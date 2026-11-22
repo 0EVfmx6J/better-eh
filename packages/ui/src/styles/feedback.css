@@ -151,6 +151,30 @@
 .bookmark-notice-leave-active {
   @apply pointer-events-none;
 }
+.scroll-edge-reveal {
+  @apply pointer-events-none overflow-clip;
+}
+.scroll-edge-chip {
+  @apply absolute top-1/2 flex min-h-[34px] items-center gap-2 rounded-full border border-solid border-line bg-surface px-3 text-xs whitespace-nowrap text-ink;
+  left: var(--scroll-edge-center, 50%);
+  transform: translate(-50%, -50%) scale(var(--scroll-edge-scale, 1));
+}
+.infinite-scroll-overlay {
+  @apply pointer-events-none absolute inset-0;
+}
+.eh-app > .infinite-scroll-overlay {
+  @apply fixed;
+}
+.infinite-scroll-refresh {
+  @apply absolute inset-x-0 z-10;
+  top: max(var(--masthead-height, 0px), env(safe-area-inset-top));
+}
+.infinite-scroll-end {
+  @apply absolute inset-x-0 bottom-0;
+}
+.infinite-scroll-end.reader-end-reveal {
+  bottom: calc(var(--reader-progress-bottom) + var(--reader-progress-height) + 4px);
+}
 .infinite-sentinel-inner {
   @apply flex min-h-[38px] items-center justify-center gap-[10px] text-muted;
   transform: translateY(0);

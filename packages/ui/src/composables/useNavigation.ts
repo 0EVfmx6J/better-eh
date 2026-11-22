@@ -62,6 +62,7 @@ export function useNavigation(
   initialPage: SitePage,
   initialUrl: string,
   viewport: Readonly<Ref<HTMLElement | null>>,
+  pageContent: Readonly<Ref<HTMLElement | null>>,
   viewActive?: Readonly<Ref<boolean>>,
 ) {
   const currentUrl = ref(initialUrl)
@@ -93,7 +94,6 @@ export function useNavigation(
   const loadingPrevious = ref(false)
   const loadPreviousFailure = shallowRef<string>()
   const readerRevision = ref(0)
-  const pageContent = useTemplateRef<HTMLElement>('pageContent')
   const readerPages = useTemplateRef<InstanceType<typeof ReaderPages>>('readerPages')
   const readingQueue = shallowRef(initialQueue?.chapters)
   const readerChapter = ref(initialQueue?.chapter ?? 0)
@@ -137,6 +137,17 @@ export function useNavigation(
     const current = page.value
     if (current.kind === 'reader') return readerHasNext(current) || Boolean(nextChapter.value)
     return 'next' in current && Boolean(current.next)
+  })
+  const reachedEnd = computed(() => {
+    if (viewActive?.value === false || hasMore.value || pending.value || failure.value || loadMoreFailure.value)
+      return false
+    if (loadingMore.value || loadingPrevious.value) return false
+    const current = page.value
+    if (current.kind === 'catalog') return Boolean(current.items.length || current.featured?.items.length)
+    if (current.kind === 'gallery') return current.thumbnails.length > 0
+    return (
+      current.kind === 'reader' && (!current.total || (current.frames?.at(-1)?.index ?? current.index) >= current.total)
+    )
   })
   const canLoadNextPage = computed(() => {
     const current = page.value
@@ -554,6 +565,7 @@ export function useNavigation(
     loadPreviousFailure,
     readerRevision,
     hasMore,
+    reachedEnd,
     canLoadNextPage,
     canLoadNextChapter,
     hasPrevious,

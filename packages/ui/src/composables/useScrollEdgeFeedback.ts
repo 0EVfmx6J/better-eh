@@ -24,12 +24,14 @@ function fingerPosition(touch: Touch, scale: number, viewport: VisualViewport | 
   return { x: (touch.pageX - viewport.pageLeft) * scale, y: (touch.pageY - viewport.pageTop) * scale }
 }
 
-export function usePullToRefresh(
+function useScrollEdgePull(
   surface: Readonly<Ref<HTMLElement | null>>,
   blocked: Readonly<Ref<boolean>>,
   reducedMotion: Readonly<Ref<boolean>>,
-  refresh: () => Promise<void>,
+  options: { edge: 'top'; refresh: () => Promise<void> } | { edge: 'bottom' },
 ) {
+  const bottom = options.edge === 'bottom'
+  const direction = bottom ? -1 : 1
   const position = reactive({ y: 0 })
   const spring = { stiffness: 340, damping: 37, restDelta: 0.15, restSpeed: 3, velocity: 0 }
   const { set, stop } = useSpring(position, spring)
@@ -40,17 +42,29 @@ export function usePullToRefresh(
   const ready = computed(() => dragging.value && distance.value >= triggerDistance)
   let pull: Pull | undefined
 
-  function atTop(): boolean {
-    // A zoomed visual viewport can still pan up when the list itself is already at the top.
-    return Boolean(surface.value && surface.value.scrollTop <= 1 && (window.visualViewport?.offsetTop ?? 0) <= 1)
+  function atEdge(element: HTMLElement | null, viewport: VisualViewport | null): boolean {
+    if (!element) return false
+    // At a scroll edge the zoomed visual viewport may still have room to pan.
+    if (!bottom) return element.scrollTop <= 1 && (viewport?.offsetTop ?? 0) <= 1
+    if (element.scrollHeight - element.clientHeight - element.scrollTop > 1) return false
+    return (
+      !viewport ||
+      viewport.scale <= 1.01 ||
+      viewport.offsetTop + viewport.height >= element.getBoundingClientRect().bottom - 1
+    )
   }
 
-  function viewportStayedAtTop(current: Pull, viewport: VisualViewport | null): boolean {
+  function viewportAtEdge(current: Pull, viewport: VisualViewport | null): boolean {
     return (
-      atTop() &&
+      atEdge(surface.value, viewport) &&
       (!current.edge || Math.abs((viewport?.offsetLeft ?? 0) - current.edge.viewportLeft) * current.scale <= slop) &&
       Math.abs((viewport?.scale ?? 1) - current.scale) <= 0.01
     )
+  }
+
+  function damp(raw: number): number {
+    const resisted = Math.max(0, raw) * resistance
+    return (maxDistance * resisted) / (maxDistance + resisted)
   }
 
   function settle(target: number, velocity = 0): void {
@@ -74,6 +88,14 @@ export function usePullToRefresh(
     if (detach()?.rawOffset !== undefined) settle(0)
   }
 
+  function acceptsTarget(target: EventTarget | null, element: HTMLElement): boolean {
+    return (
+      !(target instanceof Element) ||
+      (target.closest('dialog') === element.closest('dialog') &&
+        !target.closest('input, select, textarea, [contenteditable], .filters, .site-sidebar, .tag-suggestions'))
+    )
+  }
+
   function move(event: TouchEvent): void {
     const current = pull
     if (!current) return
@@ -84,7 +106,7 @@ export function usePullToRefresh(
       event.touches.length !== 1 ||
       touch.identifier !== current.id ||
       blocked.value ||
-      (!event.cancelable && current.scale <= 1.01) ||
+      (!event.cancelable && !bottom && current.scale <= 1.01) ||
       Math.abs((viewport?.scale ?? 1) - current.scale) > 0.01
     ) {
       cancel()
@@ -94,17 +116,17 @@ export function usePullToRefresh(
     const finger = fingerPosition(touch, current.scale, viewport)
     if (!current.edge) {
       const dx = Math.abs(finger.x - current.start.x)
-      const dy = finger.y - current.start.y
+      const dy = direction * (finger.y - current.start.y)
       if (Math.max(dx, Math.abs(dy)) >= slop && dy <= dx) cancel()
-      else if (atTop()) current.edge = { ...finger, viewportLeft: viewport?.offsetLeft ?? 0 }
+      else if (atEdge(surface.value, viewport)) current.edge = { ...finger, viewportLeft: viewport?.offsetLeft ?? 0 }
       return
     }
-    if (!viewportStayedAtTop(current, viewport)) {
+    if (!viewportAtEdge(current, viewport)) {
       cancel()
       return
     }
 
-    const dy = finger.y - current.edge.y
+    const dy = direction * (finger.y - current.edge.y)
     if (current.rawOffset === undefined) {
       const dx = Math.abs(finger.x - current.edge.x)
       if (Math.max(dx, Math.abs(dy)) < slop) return
@@ -120,10 +142,9 @@ export function usePullToRefresh(
       dragging.value = true
     }
 
-    // Let the browser keep handling zoomed gestures, even while we measure the pull past the top edge.
-    if (current.scale <= 1.01) event.preventDefault()
-    const resisted = Math.max(0, current.rawOffset + dy - slop) * resistance
-    const next = (maxDistance * resisted) / (maxDistance + resisted)
+    // Let the browser keep handling zoomed gestures while we measure the pull past the edge.
+    if (event.cancelable && current.scale <= 1.01) event.preventDefault()
+    const next = damp(current.rawOffset + dy - slop)
     const elapsed = Math.max(8, event.timeStamp - current.time)
     current.velocity = Math.max(-600, Math.min(600, ((next - distance.value) * 1000) / elapsed))
     current.time = event.timeStamp
@@ -135,27 +156,19 @@ export function usePullToRefresh(
     const element = surface.value
     const touch = event.touches[0]
     const target = event.target
-    const viewport = window.visualViewport
-    const zoom = viewport?.scale ?? 1
-    const atEdge = atTop()
-    if (
-      blocked.value ||
-      !element ||
-      !touch ||
-      event.touches.length !== 1 ||
-      (!atEdge && zoom <= 1.01) ||
-      (target instanceof Element &&
-        (target.closest('dialog') !== element.closest('dialog') ||
-          target.closest('input, select, textarea, [contenteditable], .filters, .site-sidebar, .tag-suggestions')))
-    ) {
+    if (blocked.value || !element || !touch || event.touches.length !== 1 || !acceptsTarget(target, element)) {
       return
     }
+    const viewport = window.visualViewport
+    const zoom = viewport?.scale ?? 1
+    const atBoundary = atEdge(element, viewport)
+    if (!bottom && !atBoundary && zoom <= 1.01) return
     const start = fingerPosition(touch, zoom, viewport)
     pull = {
       id: touch.identifier,
       start,
       scale: zoom,
-      edge: atEdge ? { ...start, viewportLeft: viewport?.offsetLeft ?? 0 } : undefined,
+      edge: atBoundary ? { ...start, viewportLeft: viewport?.offsetLeft ?? 0 } : undefined,
       time: event.timeStamp,
       velocity: 0,
     }
@@ -164,32 +177,59 @@ export function usePullToRefresh(
   async function end(event: TouchEvent): Promise<void> {
     const current = detach()
     if (!current || current.rawOffset === undefined) return
+    const velocity = event.timeStamp - current.time < 80 ? current.velocity : 0
     const shouldRefresh =
+      options.edge === 'top' &&
       event.touches.length === 0 &&
       distance.value >= triggerDistance &&
       !blocked.value &&
-      viewportStayedAtTop(current, window.visualViewport)
-    const velocity = event.timeStamp - current.time < 80 ? current.velocity : 0
+      viewportAtEdge(current, window.visualViewport)
     if (!shouldRefresh) {
       settle(0, velocity)
       return
     }
     settle(holdDistance, velocity)
     try {
-      await refresh()
+      await options.refresh()
     } finally {
       settle(0)
     }
   }
 
-  useEventListener(surface, 'touchstart', start, { passive: true })
-  // Install before touchstart so the first move is cancellable during a fast drag.
-  useEventListener(surface, 'touchmove', move, { capture: true, passive: false })
-  useEventListener(surface, 'touchend', end, { passive: true })
-  useEventListener(surface, 'touchcancel', cancel, { passive: true })
+  const target = computed(() => (bottom && blocked.value ? null : surface.value))
+  useEventListener(target, 'touchstart', start, { passive: true })
+  useEventListener(target, 'touchmove', move, { capture: true, passive: false })
+  useEventListener(target, 'touchend', end, { passive: true })
+  useEventListener(target, 'touchcancel', cancel, { passive: true })
   watch(blocked, (value) => {
-    if (value) cancel()
+    if (!value) return
+    if (bottom) {
+      detach()
+      stop()
+      position.y = 0
+    } else cancel()
   })
 
   return { offset, ready }
+}
+
+export function useScrollEdgeFeedback(
+  surface: Readonly<Ref<HTMLElement | null>>,
+  reducedMotion: Readonly<Ref<boolean>>,
+  refreshBlocked: Readonly<Ref<boolean>>,
+  refresh: () => Promise<void>,
+  reachedEnd: Readonly<Ref<boolean>>,
+) {
+  const { offset: pullOffset, ready: pullReady } = useScrollEdgePull(surface, refreshBlocked, reducedMotion, {
+    edge: 'top',
+    refresh,
+  })
+  const { offset: endOffset } = useScrollEdgePull(
+    surface,
+    computed(() => !reachedEnd.value),
+    reducedMotion,
+    { edge: 'bottom' },
+  )
+  const contentOffset = computed(() => pullOffset.value - endOffset.value)
+  return { pullOffset, pullReady, endOffset, contentOffset }
 }

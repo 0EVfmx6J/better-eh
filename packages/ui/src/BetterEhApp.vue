@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Bookmark, Check, Menu, X } from '@lucide/vue'
-import { useEventListener, useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
+import { useMediaQuery, usePreferredReducedMotion } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, provide, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
 import type { ReadingLibraryRepository, SiteAdapter, SiteNavigationItem, SitePage } from '@better-eh/core'
@@ -10,8 +10,8 @@ import CatalogPage from './components/CatalogPage.vue'
 import ConfirmationDialog from './components/ConfirmationDialog.vue'
 import GalleryActionSheet from './components/GalleryActionSheet.vue'
 import GalleryDetail from './components/GalleryDetail.vue'
+import InfiniteScroll from './components/InfiniteScroll.vue'
 import LoadingSpinner from './components/LoadingSpinner.vue'
-import LoadMoreIndicator from './components/LoadMoreIndicator.vue'
 import PageLinks from './components/PageLinks.vue'
 import ReaderPages from './components/ReaderPages.vue'
 import ReaderProgress from './components/ReaderProgress.vue'
@@ -23,7 +23,6 @@ import TagsPanel from './components/TagsPanel.vue'
 import { useGalleryLibrary } from './composables/useGalleryLibrary'
 import { useGallerySearch } from './composables/useGallerySearch'
 import { useNavigation } from './composables/useNavigation'
-import { usePullToRefresh } from './composables/usePullToRefresh'
 import { useReader } from './composables/useReader'
 import { usePreferencesStore } from './stores/preferences'
 import { useReadingLibraryStore } from './stores/reading-library'
@@ -41,16 +40,19 @@ const props = defineProps<{
   openingNative?: ShallowRef<boolean>
   readingLibraryRepository: ReadingLibraryRepository
 }>()
-const app = useTemplateRef<HTMLElement>('app')
+const scroll = useTemplateRef('scroll')
+const app = computed(() => scroll.value?.viewport ?? null)
 const header = useTemplateRef('header')
 const siteMenu = useTemplateRef('siteMenu')
 const menuOpen = shallowRef(false)
-const visualViewport = window.visualViewport
-const zoomed = shallowRef((visualViewport?.scale ?? 1) > 1.01)
-useEventListener(visualViewport, 'resize', () => {
-  zoomed.value = (visualViewport?.scale ?? 1) > 1.01
-})
-const navigation = useNavigation(props.adapter, props.initialPage, props.initialUrl, app, props.viewActive)
+const navigation = useNavigation(
+  props.adapter,
+  props.initialPage,
+  props.initialUrl,
+  app,
+  computed(() => scroll.value?.content ?? null),
+  props.viewActive,
+)
 const {
   page,
   navigate,
@@ -71,6 +73,7 @@ const {
   loadPreviousFailure,
   readerRevision,
   hasMore,
+  reachedEnd,
   hasPrevious,
   loadMore,
   retryNavigation,
@@ -147,6 +150,8 @@ const {
   activeFramePosition,
   readerPagesAhead,
   readerPagesBehind,
+  readerPreloadDirection,
+  canPreloadAtBottom,
   scrollY,
   brokenImages,
   imageRetryErrors,
@@ -177,7 +182,18 @@ const {
 provide(galleryViewportKey, { viewport: app, restoration: navigation.galleryRestoration, returningToTop })
 const refreshBlocked = computed(() => Boolean(pending.value || savingTags.value))
 const pullRefreshBlocked = computed(() => refreshBlocked.value || hasPrevious.value || loadingPrevious.value)
-const { offset: pullOffset, ready: pullReady } = usePullToRefresh(app, pullRefreshBlocked, reducedMotion, refreshPage)
+const virtual = computed(() => page.value.kind !== 'tags')
+const contentAttrs = computed(() => ({
+  class: { 'shell main': true, 'reader-main': Boolean(reader.value) },
+  'aria-busy': busy.value,
+  tabindex: reader.value && !desktopNavigation.value ? 0 : undefined,
+  'aria-label': reader.value && !desktopNavigation.value ? '阅读内容，按回车切换菜单' : undefined,
+  onClick: tapReader,
+  onKeydown: (event: KeyboardEvent) => {
+    if (event.key === 'Enter' && event.target === event.currentTarget && reader.value && !desktopNavigation.value)
+      toggleReaderChrome()
+  },
+}))
 const activeUrl = computed(() => new URL(currentUrl.value))
 const home = computed(() => props.adapter.home(activeUrl.value))
 const nativeHref = computed(() =>
@@ -255,16 +271,17 @@ watch(
 watch(desktopNavigation, (wide) => {
   if (wide) closeSiteMenu()
 })
-useResizeObserver(
-  () => header.value?.masthead,
-  ([entry]) => {
-    if (entry) app.value?.style.setProperty('--masthead-height', entry.target.getBoundingClientRect().height + 'px')
-  },
-)
 
 function refreshPage(): Promise<void> {
   if (page.value.kind === 'library') return readLibrary()
   return navigate(currentUrl.value, 'refresh')
+}
+
+function refreshFromTop(): Promise<void> {
+  const first = readerFrames.value[0]
+  if (!reader.value || !first) return refreshPage()
+  const chapters = readingQueue.value
+  return navigate(first.href, 'refresh', undefined, chapters && { chapters, chapter: first.chapter })
 }
 
 function activate(event: MouseEvent, url: string | undefined) {
@@ -313,77 +330,86 @@ function goBack(event: MouseEvent) {
 </script>
 
 <template>
-  <div
-    ref="app"
+  <InfiniteScroll
+    ref="scroll"
     class="eh-app"
-    :class="{ 'has-site-nav': !reader && navigationItems.length, 'is-reader': reader, 'is-zoomed': zoomed }"
+    :class="{ 'has-site-nav': !reader && navigationItems.length, 'is-reader': reader }"
+    :content-attrs="contentAttrs"
+    content-as="main"
+    :virtual="virtual"
+    :refresh="refreshFromTop"
+    :refresh-blocked="pullRefreshBlocked || (page.kind === 'library' && loadingLibrary)"
+    :refreshing="refreshing || (page.kind === 'library' && loadingLibrary)"
+    :load-more="loadMore"
+    :retry-load-more="retryLoadMore"
+    :loading-blocked="Boolean(pending || loadingPrevious)"
+    :loading="loadingMore"
+    :has-more="hasMore"
+    :error="loadMoreFailure"
+    :reached-end="reachedEnd"
+    :active="viewActive?.value !== false"
+    :show-load-hint="page.kind !== 'reader'"
+    :preload-distance="reader ? 180 : 760"
+    :load-interval="900"
+    :can-preload="canPreloadAtBottom"
+    :preload-direction="readerPreloadDirection"
+    :end-indicator-class="{ 'reader-end-reveal': Boolean(reader && chromeVisible) }"
     :data-theme="theme"
     lang="zh-CN"
     role="region"
     aria-label="Better EH"
     tabindex="0"
   >
-    <AppHeader
-      v-show="chromeVisible"
-      ref="header"
-      v-model:search="search"
-      v-model:search-open="searchOpen"
-      :home="home"
-      :back="back"
-      :has-navigation="navigationItems.length > 0"
-      :menu-open="menuOpen"
-      :compact-search="compactSearch"
-      :complete-tags="adapter.completeTags"
-      :wide-reader="wideReader"
-      :small-reader-header="smallReaderHeader"
-      :is-reader="Boolean(reader)"
-      :reader-title="reader?.title"
-      :busy="busy"
-      :refresh-blocked="refreshBlocked || (page.kind === 'library' && loadingLibrary)"
-      :refreshing-content="refreshing || (page.kind === 'library' && loadingLibrary)"
-      :refreshing="refreshing"
-      :pull-offset="pullOffset"
-      :pull-ready="pullReady"
-      :native-href="nativeHref"
-      :opening-native="openingNative?.value"
-      :can-bookmark="Boolean(readingGallery)"
-      :saved-for-later="savedForLater"
-      :bookmarks-busy="bookmarksBusy"
-      @navigate="activate"
-      @go-back="goBack"
-      @open-site-menu="openSiteMenu"
-      @toggle-search="toggleSearch"
-      @close-search="closeSearch"
-      @load-tags="loadTags"
-      @submit-search="submitSearch"
-      @refresh="refreshPage"
-      @toggle-bookmark="toggleReadLater($event.currentTarget, readingGallery)"
-    />
+    <template #header>
+      <AppHeader
+        v-show="chromeVisible"
+        ref="header"
+        v-model:search="search"
+        v-model:search-open="searchOpen"
+        :home="home"
+        :back="back"
+        :has-navigation="navigationItems.length > 0"
+        :menu-open="menuOpen"
+        :compact-search="compactSearch"
+        :complete-tags="adapter.completeTags"
+        :wide-reader="wideReader"
+        :small-reader-header="smallReaderHeader"
+        :is-reader="Boolean(reader)"
+        :reader-title="reader?.title"
+        :busy="busy"
+        :refresh-blocked="refreshBlocked || (page.kind === 'library' && loadingLibrary)"
+        :refreshing-content="refreshing || (page.kind === 'library' && loadingLibrary)"
+        :native-href="nativeHref"
+        :opening-native="openingNative?.value"
+        :can-bookmark="Boolean(readingGallery)"
+        :saved-for-later="savedForLater"
+        :bookmarks-busy="bookmarksBusy"
+        @navigate="activate"
+        @go-back="goBack"
+        @open-site-menu="openSiteMenu"
+        @toggle-search="toggleSearch"
+        @close-search="closeSearch"
+        @load-tags="loadTags"
+        @submit-search="submitSearch"
+        @refresh="refreshPage"
+        @toggle-bookmark="toggleReadLater($event.currentTarget, readingGallery)"
+      />
 
-    <aside v-if="navigationItems.length" v-show="chromeVisible" class="site-sidebar">
-      <SiteNavLinks :items="navigationItems" :current-url="activeUrl" @select="selectSection" />
-    </aside>
+      <aside v-if="navigationItems.length" v-show="chromeVisible" class="site-sidebar">
+        <SiteNavLinks :items="navigationItems" :current-url="activeUrl" @select="selectSection" />
+      </aside>
 
-    <SiteMenu
-      v-if="navigationItems.length"
-      ref="siteMenu"
-      :items="navigationItems"
-      :current-url="activeUrl"
-      @close="closeSiteMenu"
-      @select="selectSection"
-    />
+      <SiteMenu
+        v-if="navigationItems.length"
+        ref="siteMenu"
+        :items="navigationItems"
+        :current-url="activeUrl"
+        @close="closeSiteMenu"
+        @select="selectSection"
+      />
+    </template>
 
-    <main
-      ref="pageContent"
-      class="shell main"
-      :class="{ 'reader-main': reader }"
-      :aria-busy="busy"
-      :tabindex="reader && !desktopNavigation ? 0 : undefined"
-      :aria-label="reader && !desktopNavigation ? '阅读内容，按回车切换菜单' : undefined"
-      :style="pullOffset > 0 ? { transform: 'translateY(' + pullOffset + 'px)' } : undefined"
-      @click="tapReader"
-      @keydown.enter.self="reader && !desktopNavigation && toggleReaderChrome()"
-    >
+    <template #[virtual?'virtual':'default']="{ viewport }">
       <div v-if="failure && !readerSeekFailure" class="notice flex flex-wrap items-center gap-3" role="alert">
         <span class="grow">{{ failure.message }}</span>
         <button type="button" class="pill" @click="retryNavigation">重试</button>
@@ -455,7 +481,7 @@ function goBack(event: MouseEvent) {
         ref="readerPages"
         :title="reader?.title"
         :frames="readerFrames"
-        :viewport="app"
+        :viewport="viewport"
         :active="viewActive?.value !== false"
         :load-thumbnails="navigation.loadReaderThumbnails"
         :scroll-top="scrollY"
@@ -476,118 +502,112 @@ function goBack(event: MouseEvent) {
         @load-original-image="loadOriginalImage"
         @show-page="navigation.showReaderFrame"
       />
-
-      <LoadMoreIndicator
-        v-if="hasMore || loadingMore || loadMoreFailure"
-        :loading="loadingMore"
-        :error="loadMoreFailure"
-        :show-hint="page.kind !== 'reader'"
-        @load="loadMore()"
-        @retry="retryLoadMore()"
-      />
-
+    </template>
+    <template #after-content>
       <PageLinks
         v-if="(page.kind === 'catalog' || page.kind === 'gallery') && (page.previous || page.next)"
         :previous="page.previous"
         :next="page.next"
         @navigate="activate"
       />
-    </main>
-    <button
-      v-if="reader && desktopNavigation"
-      class="icon-button reader-menu-toggle"
-      type="button"
-      :aria-label="readerChrome ? '隐藏阅读菜单' : '显示阅读菜单'"
-      :aria-expanded="readerChrome"
-      aria-controls="better-eh-masthead better-eh-reader-progress"
-      @click="toggleReaderChrome"
-    >
-      <X v-if="readerChrome" :size="21" aria-hidden="true" />
-      <Menu v-else :size="21" aria-hidden="true" />
-    </button>
-    <ReaderProgress
-      v-if="reader"
-      v-show="chromeVisible"
-      v-model:chapters-open="chaptersOpen"
-      :chapters="readingQueue"
-      :active-chapter="readerChapter"
-      :current-page="readerDisplayIndex"
-      :total-pages="readerTotal"
-      :pending="Boolean(pending)"
-      :seeking-reader="seekingReader"
-      :error="readerSeekFailure?.message"
-      :open-chapter="selectReaderChapter"
-      @retry="retryNavigation"
-      @preview="previewReaderPage"
-      @cancel-preview="clearReaderPreview"
-    />
-    <TagSearchPopover
-      v-if="tagSearch"
-      :key="tagSearch.href"
-      :anchor="tagSearch.trigger"
-      :label="(tagSearch.tag.key && tags.translate?.(tagSearch.tag.key)) || tagSearch.tag.label"
-      :href="tagSearch.href"
-      @add="addTagToSearch"
-      @search="runTagSearch"
-      @dismiss="dismissTagSearch"
-    />
-    <Transition name="card-action-sheet" @after-leave="restoreCardActionFocus">
-      <GalleryActionSheet
-        v-if="cardActionSheet"
-        ref="cardActionDialog"
-        :title="cardActionSheet.gallery.title"
-        :busy="bookmarksBusy"
-        :removal-section="cardRemovalSection"
-        @close="closeCardActionSheet"
-        @submit="submitCardAction"
+    </template>
+    <template #after="{ pullOffset }">
+      <button
+        v-if="reader && desktopNavigation"
+        class="icon-button reader-menu-toggle"
+        type="button"
+        :aria-label="readerChrome ? '隐藏阅读菜单' : '显示阅读菜单'"
+        :aria-expanded="readerChrome"
+        aria-controls="better-eh-masthead better-eh-reader-progress"
+        @click="toggleReaderChrome"
+      >
+        <X v-if="readerChrome" :size="21" aria-hidden="true" />
+        <Menu v-else :size="21" aria-hidden="true" />
+      </button>
+      <ReaderProgress
+        v-if="reader"
+        v-show="chromeVisible"
+        v-model:chapters-open="chaptersOpen"
+        :chapters="readingQueue"
+        :active-chapter="readerChapter"
+        :current-page="readerDisplayIndex"
+        :total-pages="readerTotal"
+        :pending="Boolean(pending)"
+        :seeking-reader="seekingReader"
+        :error="readerSeekFailure?.message"
+        :open-chapter="selectReaderChapter"
+        @retry="retryNavigation"
+        @preview="previewReaderPage"
+        @cancel-preview="clearReaderPreview"
       />
-    </Transition>
-    <ConfirmationDialog
-      v-if="removalDialog"
-      v-bind="removalDialog"
-      :busy="savingLibrary"
-      :error="removalFailed ? libraryError : ''"
-      @confirm="confirmRemoval"
-      @cancel="closeRemoval"
-    />
-    <span ref="bookmarkFlight" class="bookmark-flight" aria-hidden="true">
-      <Bookmark :size="17" />
-    </span>
-    <Transition name="bookmark-notice">
-      <div v-if="libraryNotice" class="bookmark-notice" @focusin="stopLibraryNotice" @focusout="startLibraryNotice">
-        <p role="status">
-          <Check v-if="!libraryNotice.failed" :size="18" aria-hidden="true" />
-          {{ libraryNotice.text }}
-        </p>
-        <a
-          v-if="libraryNotice.saved"
-          ref="bookmarkNoticeDestination"
-          :href="libraryUrl(home, 'later')"
-          @click="activate($event, libraryUrl(home, 'later'))"
-        >
-          去看看
-        </a>
+      <TagSearchPopover
+        v-if="tagSearch"
+        :key="tagSearch.href"
+        :anchor="tagSearch.trigger"
+        :label="(tagSearch.tag.key && tags.translate?.(tagSearch.tag.key)) || tagSearch.tag.label"
+        :href="tagSearch.href"
+        @add="addTagToSearch"
+        @search="runTagSearch"
+        @dismiss="dismissTagSearch"
+      />
+      <Transition name="card-action-sheet" @after-leave="restoreCardActionFocus">
+        <GalleryActionSheet
+          v-if="cardActionSheet"
+          ref="cardActionDialog"
+          :title="cardActionSheet.gallery.title"
+          :busy="bookmarksBusy"
+          :removal-section="cardRemovalSection"
+          @close="closeCardActionSheet"
+          @submit="submitCardAction"
+        />
+      </Transition>
+      <ConfirmationDialog
+        v-if="removalDialog"
+        v-bind="removalDialog"
+        :busy="savingLibrary"
+        :error="removalFailed ? libraryError : ''"
+        @confirm="confirmRemoval"
+        @cancel="closeRemoval"
+      />
+      <span ref="bookmarkFlight" class="bookmark-flight" aria-hidden="true">
+        <Bookmark :size="17" />
+      </span>
+      <Transition name="bookmark-notice">
+        <div v-if="libraryNotice" class="bookmark-notice" @focusin="stopLibraryNotice" @focusout="startLibraryNotice">
+          <p role="status">
+            <Check v-if="!libraryNotice.failed" :size="18" aria-hidden="true" />
+            {{ libraryNotice.text }}
+          </p>
+          <a
+            v-if="libraryNotice.saved"
+            ref="bookmarkNoticeDestination"
+            :href="libraryUrl(home, 'later')"
+            @click="activate($event, libraryUrl(home, 'later'))"
+          >
+            去看看
+          </a>
+        </div>
+      </Transition>
+      <div
+        v-if="openingNative?.value || pending"
+        :class="!openingNative?.value && refreshing && pullOffset > 0 ? 'sr-only' : 'loading-note'"
+        role="status"
+      >
+        <LoadingSpinner :size="17" aria-hidden="true" />
+        {{
+          openingNative?.value
+            ? '正在打开原站…'
+            : seekingReader
+              ? '正在跳页'
+              : returningToStart
+                ? '正在返回第 1 页'
+                : refreshing
+                  ? '正在刷新'
+                  : '正在加载'
+        }}
       </div>
-    </Transition>
-    <div
-      v-if="openingNative?.value || pending"
-      :class="!openingNative?.value && refreshing && pullOffset > 0 ? 'sr-only' : 'loading-note'"
-      role="status"
-    >
-      <LoadingSpinner :size="17" aria-hidden="true" />
-      {{
-        openingNative?.value
-          ? '正在打开原站…'
-          : seekingReader
-            ? '正在跳页'
-            : returningToStart
-              ? '正在返回第 1 页'
-              : refreshing
-                ? '正在刷新'
-                : '正在加载'
-      }}
-    </div>
-  </div>
+    </template>
+  </InfiniteScroll>
   <!-- A tap inside the scroller may only stop momentum on iOS, without sending a click. -->
   <BackToTopButton
     :visible="showBackToTop"

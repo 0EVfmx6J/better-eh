@@ -7,7 +7,6 @@ import type { CompleteTags } from '@better-eh/core'
 import { usePreferencesStore } from '../stores/preferences'
 import BookmarkButton from './BookmarkButton.vue'
 import LoadingSpinner from './LoadingSpinner.vue'
-import PullRefreshIndicator from './PullRefreshIndicator.vue'
 import TagSearchBox from './TagSearchBox.vue'
 
 defineProps<{
@@ -24,9 +23,6 @@ defineProps<{
   busy: boolean
   refreshBlocked: boolean
   refreshingContent: boolean
-  refreshing: boolean
-  pullOffset: number
-  pullReady: boolean
   nativeHref?: string
   openingNative?: boolean
   canBookmark: boolean
@@ -69,7 +65,6 @@ onClickOutside(
   },
 )
 defineExpose({
-  masthead,
   focusSearch: () => searchBox.value?.focus(),
   focusSearchAtEnd: () => searchBox.value?.focusAtEnd(),
   focusSearchToggle: () => searchToggle.value?.focus({ preventScroll: true }),
@@ -195,6 +190,5 @@ defineExpose({
       </Teleport>
     </div>
     <div v-if="busy" class="progress-bar" role="progressbar" aria-label="正在加载页面" />
-    <PullRefreshIndicator :offset="pullOffset" :ready="pullReady" :refreshing="refreshing" />
   </header>
 </template>
