@@ -6,13 +6,37 @@ export function searchTokens(query: string) {
   }))
 }
 
-export function searchTokenAt(query: string, caret: number) {
+export interface SearchCompletionRange {
+  start: number
+  end: number
+  existing: ReadonlySet<string>
+  phrase: boolean
+}
+
+export function searchCompletionRanges(query: string, caret: number): SearchCompletionRange[] {
   const tokens = searchTokens(query)
-  const token = tokens.find(({ start, end }) => caret > start && caret <= end)
-  if (!token) return undefined
-  return {
-    start: token.start,
-    end: token.end,
-    existing: new Set(tokens.filter((part) => part !== token).map((part) => part.text.toLowerCase())),
+  const index = tokens.findIndex(({ start, end }) => caret > start && caret <= end)
+  const current = tokens[index]
+  if (!current) return []
+
+  // Try the phrase ending at the caret without consuming quoted or completed terms before it.
+  const candidates = [current]
+  let next = current
+  for (const previous of tokens.slice(Math.max(0, index - 4), index).reverse()) {
+    if (/^[-~]|\s|:|"/.test(next.text)) break
+    if (/["$]/.test(previous.text) || /^(?:AND|OR|NOT)$/.test(previous.text)) break
+    candidates.unshift(previous)
+    next = previous
   }
+
+  return candidates.map(({ start }, offset) => ({
+    start,
+    end: current.end,
+    phrase: start !== current.start,
+    existing: new Set(
+      [...tokens.slice(0, index + 1 - candidates.length + offset), ...tokens.slice(index + 1)].map(({ text }) =>
+        text.toLowerCase(),
+      ),
+    ),
+  }))
 }

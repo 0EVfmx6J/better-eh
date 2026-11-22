@@ -1,6 +1,7 @@
 import { nextTick, shallowRef, watch, type Ref } from 'vue'
 import { searchTokens, type GalleryTag, type SiteAdapter } from '@better-eh/core'
 import type AppHeader from '../components/AppHeader.vue'
+import { useSearchHistoryStore } from '../stores/search-history'
 import { useTagDirectoryStore } from '../stores/tag-directory'
 import { isPrimaryClick } from '../utils/is-primary-click'
 import type { useNavigation } from './useNavigation'
@@ -18,6 +19,7 @@ export function useGallerySearch(
   const search = shallowRef(page.value.kind === 'catalog' ? page.value.query : '')
   const tagSearch = shallowRef<{ tag: GalleryTag; trigger: HTMLElement; href: string; term: string }>()
   const tags = useTagDirectoryStore()
+  const { remember } = useSearchHistoryStore()
 
   watch(currentUrl, () => {
     searchOpen.value = false
@@ -43,7 +45,9 @@ export function useGallerySearch(
 
   function submitSearch() {
     searchOpen.value = false
-    void navigate(adapter.search(new URL(currentUrl.value), search.value.trim()))
+    const query = search.value.trim()
+    remember(query)
+    void navigate(adapter.search(new URL(currentUrl.value), query))
   }
 
   function openTagSearch(event: MouseEvent, tag: GalleryTag): void {
@@ -80,9 +84,11 @@ export function useGallerySearch(
 
   function runTagSearch(event: MouseEvent): void {
     if (!isPrimaryClick(event)) return
-    const href = tagSearch.value?.href
+    const selection = tagSearch.value
     dismissTagSearch(true)
-    activate(event, href)
+    if (!selection) return
+    remember(selection.term)
+    activate(event, selection.href)
   }
 
   async function toggleSearch(): Promise<void> {

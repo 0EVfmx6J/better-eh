@@ -1,4 +1,4 @@
-import { searchTokenAt, type CompleteTags, type TagCompletion } from '@better-eh/core'
+import { searchCompletionRanges, type CompleteTags, type TagCompletionContext } from '@better-eh/core'
 import { tagNamespaces } from './urls'
 
 const tagTypes = new Map<string, string>(
@@ -57,40 +57,47 @@ async function findTags(query: string, type: string | undefined, signal: AbortSi
   return matches
 }
 
-export function tagCompletionContext(query: string, caret: number) {
-  const token = searchTokenAt(query, caret)
-  if (!token) return undefined
+export function tagCompletionContexts(query: string, caret: number): TagCompletionContext[] {
+  return searchCompletionRanges(query, caret).flatMap(({ start, end, existing, phrase }) => {
+    const input = query.slice(start, caret).normalize('NFKC').toLowerCase()
+    const sign = input.startsWith('-') ? '-' : ''
+    const value = input.slice(sign.length)
+    const colon = value.indexOf(':')
+    const namespace = colon === -1 ? undefined : tagTypes.get(value.slice(0, colon))
+    if (colon !== -1 && !namespace) return []
+    const needle = value
+      .slice(colon + 1)
+      .replace(/^"/, '')
+      .trim()
+    if (!needle || needle.includes('"')) return []
 
-  const { start, end, existing } = token
-  const input = query.slice(start, caret).normalize('NFKC').toLowerCase()
-  const sign = input.startsWith('-') ? '-' : ''
-  const value = input.slice(sign.length)
-  const colon = value.indexOf(':')
-  const type = colon === -1 ? undefined : tagTypes.get(value.slice(0, colon))
-  if (colon !== -1 && !type) return undefined
-  const needle = value
-    .slice(colon + 1)
-    .replace(/^"/, '')
-    .trim()
-  if (!needle || needle.includes('"')) return undefined
-
-  const prefix = query.slice(0, start)
-  const suffix = query.slice(end) || ' '
-  return {
-    type,
-    needle,
-    replace(key: string, label: string): TagCompletion | undefined {
-      const colon = key.indexOf(':')
-      const replacement = sign + key.slice(0, colon + 1) + '"' + key.slice(colon + 1) + '"'
-      if (existing.has(replacement.toLowerCase())) return undefined
-      return { key, label, query: prefix + replacement + suffix, caret: start + replacement.length + 1 }
-    },
-  }
+    const prefix = query.slice(0, start)
+    const suffix = query.slice(end) || ' '
+    return [
+      {
+        namespace,
+        needle,
+        phrase,
+        replace(key, label) {
+          const colon = key.indexOf(':')
+          const replacement = sign + key.slice(0, colon + 1) + '"' + key.slice(colon + 1) + '"'
+          if (existing.has(replacement.toLowerCase())) return undefined
+          return { key, label, query: prefix + replacement + suffix, caret: start + replacement.length + 1 }
+        },
+      },
+    ]
+  })
 }
 
 export const completeTags: CompleteTags = async (query, caret, signal) => {
-  const context = tagCompletionContext(query, caret)
-  if (!context || (context.needle.length < 2 && !containsHan.test(context.needle))) return []
-  const matches = await findTags(context.needle, context.type, signal)
-  return matches.flatMap(({ key, label }) => context.replace(key, label) ?? [])
+  const contexts = tagCompletionContexts(query, caret)
+  // Try the phrase and then the current word, keeping remote requests bounded.
+  const candidates = contexts.length > 1 ? [contexts[0], contexts.at(-1)] : contexts
+  for (const context of candidates) {
+    if (!context || (context.needle.length < 2 && !containsHan.test(context.needle))) continue
+    const matches = await findTags(context.needle, context.namespace, signal)
+    const options = matches.flatMap(({ key, label }) => context.replace(key, label) ?? [])
+    if (options.length) return options
+  }
+  return []
 }

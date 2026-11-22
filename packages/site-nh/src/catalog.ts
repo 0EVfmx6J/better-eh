@@ -9,12 +9,14 @@ import {
 import { positiveInteger } from './dom'
 import { favoritesPath, galleryPath, galleryUrl, tagPath } from './urls'
 
+const searchPath = /^\/search(?:\/popular(?:-(?:today|week|month))?)?\/?$/
+
 function catalogTitle(doc: SiteDocument, url: URL): string | undefined {
   const path = url.pathname.replace(/\/$/, '')
   if (path === '') return '画廊索引'
   if (path === favoritesPath) return '收藏夹'
+  if (searchPath.test(path)) return '搜索结果'
   const section = path.replace(/\/popular(?:-(?:today|week|month))?$/, '')
-  if (section === '/search') return '搜索结果'
   if (tagPath.test(path) || tagPath.test(section)) {
     return text(doc.querySelector('#content h1, .index-container h1')) || '标签画廊'
   }
@@ -59,7 +61,7 @@ export function parseCatalog(doc: SiteDocument, base: URL): CatalogPage | undefi
   const favorites = base.pathname.replace(/\/$/, '') === favoritesPath
   const cards = doc.querySelectorAll('.index-container .gallery, #content .gallery')
   if (!cards.length && !doc.querySelector(favorites ? '#favcontainer, .index-container' : '.index-container')) {
-    return undefined
+    if (!searchPath.test(base.pathname) || !doc.querySelector('#content .no-results')) return undefined
   }
   const entries = new Map<string, GallerySummary>()
   const featured = new Map<string, GallerySummary>()
