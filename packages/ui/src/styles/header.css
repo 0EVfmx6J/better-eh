@@ -68,6 +68,18 @@
 .search-panel-desktop .search-editor-row {
   @apply sticky top-0 z-1 min-h-[70px] bg-surface;
 }
+.search-panel-mobile {
+  @apply fixed inset-0 m-0 h-full max-h-none w-full max-w-none overflow-hidden border-0 bg-surface p-0 text-ink;
+}
+.search-panel-mobile::backdrop {
+  background: var(--surface);
+}
+.search-panel-mobile-content {
+  @apply relative overflow-y-auto overscroll-contain;
+  top: var(--search-top, 0px);
+  height: var(--search-height, 100%);
+  max-height: calc(100% - var(--search-top, 0px));
+}
 .search-box:has(> input:focus) {
   outline: 1px solid var(--muted);
 }

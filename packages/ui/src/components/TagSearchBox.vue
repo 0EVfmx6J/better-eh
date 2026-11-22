@@ -11,7 +11,7 @@ const { directory, loading, failed } = storeToRefs(useTagDirectoryStore())
 const searchHistory = useSearchHistoryStore()
 const { recent } = storeToRefs(searchHistory)
 const props = defineProps<{ completeTags?: CompleteTags; placeholder: string }>()
-const emit = defineEmits<{ add: [query: string]; load: []; selectHistory: [query: string] }>()
+const emit = defineEmits<{ add: [query: string]; load: []; search: []; selectHistory: [query: string] }>()
 const query = defineModel<string>({ required: true })
 const control = useTemplateRef('control')
 const list = useTemplateRef('list')
@@ -150,6 +150,9 @@ function onKeydown(event: KeyboardEvent): void {
     if (option) {
       event.preventDefault()
       emit('add', option.query)
+    } else if (!query.value.trim()) {
+      event.preventDefault()
+      emit('search')
     }
   }
 }
