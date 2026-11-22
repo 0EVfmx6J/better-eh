@@ -55,7 +55,7 @@ defineExpose({ scrollToPage })
 <template>
   <h1 class="sr-only">{{ title }}</h1>
   <div
-    class="reader-surface mx-auto block w-[min(100%,1000px)] [touch-action:pan-y_pinch-zoom] overflow-visible bg-transparent"
+    class="reader-surface mx-auto block w-[min(100%,1000px)] overflow-visible bg-transparent"
     :class="{ 'fit-width': fitWidth }"
     :style="endSpace ? { paddingBottom: endSpace + 'px' } : undefined"
   >

@@ -6,7 +6,7 @@ const emit = defineEmits<{ load: []; retry: [] }>()
 </script>
 
 <template>
-  <div class="infinite-sentinel grid min-h-[94px] touch-pan-y place-items-center pt-6 pb-[38px]" aria-live="polite">
+  <div class="infinite-sentinel grid min-h-[94px] place-items-center pt-6 pb-[38px]" aria-live="polite">
     <div class="infinite-sentinel-inner" :class="{ 'is-loading': loading }">
       <LoadingSpinner v-if="loading" :size="18" />
       <span v-else-if="error" class="infinite-error">

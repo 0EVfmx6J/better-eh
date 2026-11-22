@@ -1,7 +1,6 @@
 .main {
   padding-top: clamp(30px, 4.3vw, 58px);
   padding-bottom: max(40px, env(safe-area-inset-bottom));
-  touch-action: pan-y pinch-zoom;
 }
 .reader-main {
   @apply min-h-full;

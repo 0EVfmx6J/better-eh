@@ -3,7 +3,7 @@
   @apply fixed;
   inset: 0;
   @apply block;
-  touch-action: pan-y pinch-zoom;
+  @apply touch-manipulation;
 }
 :host([hidden]) {
   @apply hidden;
@@ -65,6 +65,10 @@ svg {
 }
 .eh-app:not(.is-reader) {
   scrollbar-gutter: stable;
+}
+.eh-app.is-zoomed {
+  /* Let the visual viewport pan when the app scroller reaches an edge. */
+  @apply overscroll-y-auto;
 }
 .stop-scroll {
   @apply overflow-y-hidden;

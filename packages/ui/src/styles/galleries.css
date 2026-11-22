@@ -39,7 +39,6 @@
   scrollbar-width: thin;
   @apply overscroll-x-contain;
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
 }
 .pill {
   @apply inline-flex min-h-[36px] items-center justify-center gap-[6px];

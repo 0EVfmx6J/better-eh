@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Bookmark, Check, Menu, X } from '@lucide/vue'
-import { useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
+import { useEventListener, useMediaQuery, usePreferredReducedMotion, useResizeObserver } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, provide, shallowRef, useTemplateRef, watch, type ShallowRef } from 'vue'
 import type { ReadingLibraryRepository, SiteAdapter, SiteNavigationItem, SitePage } from '@better-eh/core'
@@ -45,6 +45,11 @@ const app = useTemplateRef<HTMLElement>('app')
 const header = useTemplateRef('header')
 const siteMenu = useTemplateRef('siteMenu')
 const menuOpen = shallowRef(false)
+const visualViewport = window.visualViewport
+const zoomed = shallowRef((visualViewport?.scale ?? 1) > 1.01)
+useEventListener(visualViewport, 'resize', () => {
+  zoomed.value = (visualViewport?.scale ?? 1) > 1.01
+})
 const navigation = useNavigation(props.adapter, props.initialPage, props.initialUrl, app, props.viewActive)
 const {
   page,
@@ -311,7 +316,7 @@ function goBack(event: MouseEvent) {
   <div
     ref="app"
     class="eh-app"
-    :class="{ 'has-site-nav': !reader && navigationItems.length, 'is-reader': reader }"
+    :class="{ 'has-site-nav': !reader && navigationItems.length, 'is-reader': reader, 'is-zoomed': zoomed }"
     :data-theme="theme"
     lang="zh-CN"
     role="region"
