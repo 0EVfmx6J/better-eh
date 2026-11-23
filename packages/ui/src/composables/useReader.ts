@@ -60,6 +60,14 @@ export function useReader({
 
   const readerChrome = shallowRef(false)
   const chaptersOpen = shallowRef(false)
+  const readerProgressDragging = shallowRef(false)
+  watch(
+    readerProgressDragging,
+    (dragging) => {
+      if (dragging) navigation.cancelLoadMore()
+    },
+    { flush: 'sync' },
+  )
   const chromeVisible = computed(() => !reader.value || readerChrome.value)
   const readerPreview = shallowRef<number>()
   let readerSeekVersion = 0
@@ -260,6 +268,7 @@ export function useReader({
     readerPagesAhead,
     readerPagesBehind,
     readerBuffer,
+    readerProgressDragging,
     readerPreloadDirection,
     canPreloadAtBottom,
     scrollY,

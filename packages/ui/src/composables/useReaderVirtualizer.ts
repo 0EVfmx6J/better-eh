@@ -10,6 +10,7 @@ export interface ReaderVirtualizerProps {
   frames: readonly (ReaderFrame & { chapter: number })[]
   pagesAhead: number
   pagesBehind: number
+  preloadPaused: boolean
   buffer: { head: readonly string[]; tail: readonly string[] }
   scrollTop: number
   trackPosition: boolean
@@ -127,9 +128,11 @@ export function useReaderVirtualizer(
     const retained = [focusedPage.value, (seekingPage.value ?? restoringPage.value)?.href]
       .filter(Boolean)
       .map((href) => slots.value.findIndex((slot) => 'frame' in slot && slot.frame.href === href))
+    const pagesBehind = props.preloadPaused ? 0 : props.pagesBehind
+    const pagesAhead = props.preloadPaused ? 0 : props.pagesAhead
     return ({ startIndex, endIndex, count }: Range) => {
-      const start = Math.max(0, startIndex - props.pagesBehind)
-      const end = Math.min(count - 1, endIndex + props.pagesAhead)
+      const start = Math.max(0, startIndex - pagesBehind)
+      const end = Math.min(count - 1, endIndex + pagesAhead)
       const range = Array.from({ length: end - start + 1 }, (_, index) => start + index)
       for (const index of retained) {
         if (index >= 0 && (index < start || index > end) && !range.includes(index)) range.push(index)

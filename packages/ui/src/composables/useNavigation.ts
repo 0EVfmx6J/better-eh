@@ -223,6 +223,10 @@ export function useNavigation(
     pending.value = undefined
   }
 
+  function cancelLoadMore(): void {
+    appendController?.abort()
+  }
+
   async function navigate(
     url: string | undefined,
     mode: NavigationMode = 'push',
@@ -576,6 +580,7 @@ export function useNavigation(
     openReaderChapter,
     showReaderFrame,
     cancelReaderSeek,
+    cancelLoadMore,
     returnToReaderStart,
     loadMore,
     loadReaderImage,

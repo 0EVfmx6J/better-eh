@@ -35,7 +35,7 @@ const { rendered, renderedBuffer, totalHeight, endSpace, focusedPage, recordImag
     emit('showPage', chapter, index),
   )
 const previewFrames = computed(() => rendered.value.map(({ frame }) => frame))
-const previewsActive = computed(() => props.active && props.trackPosition)
+const previewsActive = computed(() => props.active && props.trackPosition && !props.preloadPaused)
 const { isLoaded, previewFor, markLoaded, markFailed } = useReaderPreviews(
   previewFrames,
   previewsActive,

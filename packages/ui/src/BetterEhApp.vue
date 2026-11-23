@@ -150,6 +150,7 @@ const {
   readerPagesAhead,
   readerPagesBehind,
   readerBuffer,
+  readerProgressDragging,
   readerPreloadDirection,
   canPreloadAtBottom,
   scrollY,
@@ -351,7 +352,7 @@ function goBack(event: MouseEvent) {
     :refreshing="refreshing || (page.kind === 'library' && loadingLibrary)"
     :load-more="loadMore"
     :retry-load-more="retryLoadMore"
-    :loading-blocked="Boolean(pending || loadingPrevious)"
+    :loading-blocked="Boolean(pending || loadingPrevious || readerProgressDragging)"
     :loading="loadingMore"
     :has-more="hasMore"
     :error="loadMoreFailure"
@@ -507,6 +508,7 @@ function goBack(event: MouseEvent) {
         :returning-to-top="returningToTop"
         :pages-ahead="readerPagesAhead"
         :pages-behind="readerPagesBehind"
+        :preload-paused="readerProgressDragging"
         :buffer="readerBuffer"
         :busy="busy"
         :broken-images="brokenImages"
@@ -547,14 +549,18 @@ function goBack(event: MouseEvent) {
         v-if="reader"
         v-show="chromeVisible"
         v-model:chapters-open="chaptersOpen"
+        v-model:dragging="readerProgressDragging"
         :chapters="readingQueue"
         :active-chapter="readerChapter"
         :current-page="readerDisplayIndex"
         :total-pages="readerTotal"
+        :visible="chromeVisible && viewActive?.value !== false"
+        :gallery-href="navigation.readerGalleryUrl(reader) ?? currentUrl"
         :pending="Boolean(pending)"
         :seeking-reader="seekingReader"
         :error="readerSeekFailure?.message"
         :open-chapter="selectReaderChapter"
+        :load-thumbnails="navigation.loadReaderThumbnails"
         @retry="retryNavigation"
         @preview="previewReaderPage"
         @cancel-preview="clearReaderPreview"
